@@ -24,7 +24,6 @@ using namespace std;
 //#define PRINT_INPUT_ELEMENTS
 //#define PRINT_INTERSECTION
 
-enum PSI_PROT {NAIVE=0, TTP=1, DH_ECC=2, OT_PSI=3, PROT_LAST=4};
 
 
 int32_t benchroutine(int32_t argc, char** argv);
@@ -32,7 +31,7 @@ int32_t benchroutine(int32_t argc, char** argv);
 void read_elements(uint8_t*** elements, uint32_t** elebytelens, uint32_t* nelements, string filename);
 
 int32_t read_bench_options(int32_t* argcp, char*** argvp, role_type* role, uint32_t* nelements, uint32_t* bytelen,
-		uint32_t* secparam, string* address, uint16_t* port, uint32_t* ntasks, uint32_t* protocol, uint32_t* nclients,
+		uint32_t* secparam, string* address, uint16_t* port, uint32_t* ntasks, psi_prot* protocol, uint32_t* nclients,
 		double* epsilon, bool* cardinality, field_type* ftype, bool* detailed_timings);
 
 

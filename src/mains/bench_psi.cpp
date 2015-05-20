@@ -15,7 +15,7 @@ int32_t main(int32_t argc, char** argv) {
 
 int32_t benchroutine(int32_t argc, char** argv) {
 	uint32_t nelements=0, elebytelen=4, symsecbits=128,
-			intersect_size, i, ntasks=1, runs=1, j, protocol, nclients=2, pnelements;
+			intersect_size, i, ntasks=1, runs=1, j, nclients=2, pnelements;
 	uint8_t *elements, *intersection;
 	string address = "127.0.0.1";
 	uint16_t port=7766;
@@ -24,6 +24,7 @@ int32_t benchroutine(int32_t argc, char** argv) {
 	field_type ftype = ECC_FIELD;
 	role_type role = (role_type) 0;
 	uint64_t bytes_sent=0, bytes_received=0, mbfac;
+	psi_prot protocol;
 	double epsilon=1.2;
 	bool cardinality=false;
 	bool detailed_timings = false;
@@ -106,7 +107,6 @@ int32_t benchroutine(int32_t argc, char** argv) {
 #endif
 
 #ifdef PRINT_INTERSECTION
-
 	cout << "Found " << intersect_size << " intersecting elements" << endl;
 		if(!cardinality) {
 		for(i = 0; i < intersect_size; i++) {
@@ -126,14 +126,14 @@ int32_t benchroutine(int32_t argc, char** argv) {
 
 
 int32_t read_bench_options(int32_t* argcp, char*** argvp, role_type* role, uint32_t* nelements, uint32_t* bytelen,
-		uint32_t* secparam, string* address, uint16_t* port, uint32_t* ntasks, uint32_t* protocol, uint32_t* nclients,
+		uint32_t* secparam, string* address, uint16_t* port, uint32_t* ntasks, psi_prot* protocol, uint32_t* nclients,
 		double* epsilon, bool* cardinality, field_type* ftype, bool* detailed_timings) {
 
-	uint32_t int_role=0, int_port=0;
+	uint32_t int_role=0, int_port=0, int_protocol=0;
 	bool useffc=false;
 
 	parsing_ctx options[] = {{(void*) &int_role, T_NUM, 'r', "Role: 0/1", true, false},
-			{(void*) protocol, T_NUM, 'p', "PSI protocol (0: Naive, 1: TTP, 2: DH, 3: OT)", true, false},
+			{(void*) &int_protocol, T_NUM, 'p', "PSI protocol (0: Naive, 1: TTP, 2: DH, 3: OT)", true, false},
 			{(void*) nelements, T_NUM, 'n', "Num elements", true, false},
 			{(void*) bytelen, T_NUM, 'b', "Byte length", true, false},
 			{(void*) secparam, T_NUM, 's', "Symmetric Security Bits", false, false},
@@ -156,7 +156,9 @@ int32_t read_bench_options(int32_t* argcp, char*** argvp, role_type* role, uint3
 	assert(int_role < 2);
 	*role = (role_type) int_role;
 
-	assert(*protocol < PROT_LAST);
+	assert(int_protocol < PROT_LAST);
+	*protocol = (psi_prot) int_protocol;
+
 	if(int_port != 0) {
 		assert(int_port < 1<<(sizeof(uint16_t)*8));
 		*port = (uint16_t) int_port;
