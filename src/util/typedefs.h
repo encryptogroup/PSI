@@ -83,6 +83,7 @@ typedef int socklen_t;
 #include <errno.h>
 #include <netinet/tcp.h>
 
+
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 typedef REGISTER_SIZE REGSIZE;
@@ -101,6 +102,9 @@ typedef struct securitylevel
 	uint32_t eccpfbits;
 	uint32_t ecckcbits;
 } seclvl;
+
+
+
 
 
 static const seclvl ST = {40, 80, 1024, 160, 163};

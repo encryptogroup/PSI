@@ -13,18 +13,18 @@ int32_t main(int32_t argc, char** argv) {
 }
 
 int32_t psi_demonstrator(int32_t argc, char** argv) {
-	uint32_t nelements=0, elebytelen=16, symsecbits=128, intersect_size, i, j, ntasks=1,
+	double epsilon=1.2;
+	uint64_t bytes_sent=0, bytes_received=0, mbfac;
+	uint32_t nelements=0, elebytelen=16, symsecbits=128, intersect_size = 0, i, j, ntasks=1,
 			pnelements, *elebytelens, *res_bytelens;
-	bool detailed_timings=false;
-	uint8_t **elements, **intersection;
-	string address="127.0.0.1";
 	uint16_t port=7766;
+	uint8_t **elements, **intersection;
+	bool detailed_timings=false;
+	string address="127.0.0.1";
 	timeval t_start, t_end;
 	vector<CSocket> sockfd(ntasks);
 	string filename;
-	uint64_t bytes_sent=0, bytes_received=0, mbfac;
 	role_type role = (role_type) 0;
-	double epsilon=1.2;
 	psi_prot protocol;
 
 	mbfac=1024*1024;
@@ -64,15 +64,17 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 	case TTP:
 		///ttppsi(role, nelements, elebytelen, elements, &intersection, &crypto, sockfd.data(), nclients, cardinality); break;
 	case DH_ECC:
-		//intersect_size = dhpsi(role, nelements, pnelements, elebytelen, elements, &intersection, &crypto, sockfd.data(),
-		//		ntasks, cardinality, ftype);
+		intersect_size = dhpsi(role, nelements, pnelements, elebytelens, elements, &intersection, &res_bytelens, &crypto,
+				sockfd.data(), ntasks);
 		break;
 	case OT_PSI:
-		cout << "Performing OT psi" << endl;
 		intersect_size = otpsi(role, nelements, pnelements, elebytelens, elements, &intersection, &res_bytelens,
 				&crypto, sockfd.data(), ntasks, epsilon, detailed_timings);
 		break;
-	default:break;
+	default:
+		intersect_size = otpsi(role, nelements, pnelements, elebytelens, elements, &intersection, &res_bytelens,
+				&crypto, sockfd.data(), ntasks, epsilon, detailed_timings);
+		break;
 	}
 
 	gettimeofday(&t_end, NULL);
