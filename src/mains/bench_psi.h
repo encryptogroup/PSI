@@ -8,10 +8,10 @@
 #ifndef BENCH_PSI_H_
 #define BENCH_PSI_H_
 
-#include "pk-based/dh-psi.h"
-#include "ot-based/ot-psi.h"
-#include "thirdparty-based/shpsi.h"
-#include "naive-hashing/naive-psi.h"
+#include "../pk-based/dh-psi.h"
+#include "../ot-based/ot-psi.h"
+#include "../thirdparty-based/shpsi.h"
+#include "../naive-hashing/naive-psi.h"
 #include <fstream>
 #include <iostream>
 #include <string>

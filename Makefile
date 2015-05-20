@@ -19,12 +19,15 @@ MIRACL_MAKE:=linux
 GNU_LIB_PATH:=i386
 endif
 
-INCLUDE=-I..  -I/usr/include/glib-2.0/ -I/usr/lib/${GNU_LIB_PATH}-linux-gnu/glib-2.0/include
+INCLUDE=-I..  -I/usr/include/glib-2.0/ -I/usr/lib/${GNU_LIB_PATH}-linux-gnu/glib-2.0/include ${EXT}/miracl_lib/miracl.a
 
 
-LIBRARIES=-lgmp -lgmpxx -lpthread ${EXT}/miracl_lib/miracl.a -L /usr/lib  -lssl -lcrypto -lglib-2.0
+LIBRARIES=-lgmp -lgmpxx -lpthread  -L /usr/lib  -lssl -lcrypto -lglib-2.0
 CFLAGS=
 
+# all source files and corresponding object files 
+SOURCES_CORE := $(shell find ${CORE} -type f -name '*.cpp' -not -path '*/Miracl/*')
+OBJECTS_CORE := $(SOURCES_CORE:.cpp=.o)
 # directory for PSI related sources
 SOURCES_UTIL=${SRC}/util/*.cpp
 OBJECTS_UTIL=${SRC}/util/*.o
@@ -52,44 +55,19 @@ MIRACL_LIB_DIR=${EXT}/miracl_lib
 SOURCES_MIRACL=${EXT}/Miracl/*
 OBJECTS_MIRACL=${MIRACL_LIB_DIR}/*.o
 
-all: miracl bench
+
+all: miracl core bench
 	@echo "make all done."
 
-bench: ${OBJECTS_BENCH} ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} 
-	${CC} -o psi.exe ${SRC}/bench_psi.cpp ${CFLAGS} ${DEBUG_OPTIONS} ${OBJECTS_BENCH} ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${MIRACL_PATH} ${LIBRARIES} ${INCLUDE} ${COMPILER_OPTIONS}
-
-# Compile options for the naive-hashing-based solution
-${OBJECTS_NAIVE}: ${SOURCES_NAIVE} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO}
-	${CC} -c -o ${INCLUDE} ${SOURCES_NAIVE} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${DEBUG_OPTIONS}
-
-# Compile options for the public-key-based solution
-${OBJECTS_DHPSI}: ${SOURCES_DHPSI} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO}
-	${CC} -c -o ${INCLUDE} ${SOURCES_DHPSI} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${DEBUG_OPTIONS}
-
-# Compile options for the third-party-based solution
-${OBJECTS_THIRDPARTY}: ${SOURCES_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO}
-	${CC} -c -o ${INCLUDE} ${SOURCES_THIRDPARTY}  ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${DEBUG_OPTIONS} 
-
-# Compile options for the ot-based solution
-${OBJECTS_OTPSI}: ${SOURCES_OTPSI} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT}
-	${CC} -c -o ${INCLUDE} ${SOURCES_OTPSI} ${DEBUG_OPTIONS} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT}
+bench: ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} 
+	${CC} -o psi.exe ${SRC}/mains/bench_psi.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${INCLUDE} ${COMPILER_OPTIONS}
 
 
 
+core: ${OBJECTS_CORE}
 
-# core files for PSI
-${OBJECTS_OT}: ${OBJECTS_UTIL} ${OBJECTS_CRYPTO}
-	@cd ${BIN}; ${CC} -c ${INCLUDE} ${OBJECTS_UTIL} ${OBJECTS_CRYPTO} ${DEBUG_OPTIONS} ${SOURCES_OT}
-
-${OBJECTS_HASHING}: ${SOURCES_HASHING}
-	${CC} -c ${INCLUDE} ${SOURCES_HASHING} ${DEBUG_OPTIONS}
-
-${OBJECTS_UTIL}: ${SOURCES_UTIL}
-	${CC} -c ${INCLUDE} ${SOURCES_UTIL} ${DEBUG_OPTIONS}
-
-${OBJECTS_CRYPTO}: ${SOURCES_CRYPTO}
-	${CC} -c ${INCLUDE} ${SOURCES_CRYPTO} ${DEBUG_OPTIONS} 
-
+%.o:%.cpp %.h
+	${CC} $< ${COMPILER_OPTIONS} -c ${INCLUDE} ${LIBRARIES} ${CFLAGS} ${BATCH} -o $@
 
 
 
