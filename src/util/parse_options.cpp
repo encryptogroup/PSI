@@ -5,10 +5,23 @@
 
 #include "parse_options.h"
 
+
+void print_usage(std::string progname, parsing_ctx* options, uint32_t nops) {
+	uint32_t i;
+	std::cout << "Usage: " << progname << std::endl;
+	for (i = 0; i < nops; i++) {
+		std::cout << " -" << options[i].opt_name << " [" << options[i].help_str << (options[i].required ? ", required" : ", optional") << "]" << std::endl;
+	}
+	std::cout << std::endl << "Program exiting" << std::endl;
+}
+
+
 int32_t parse_options(int32_t* argcp, char*** argvp, parsing_ctx* options, uint32_t nops) {
 	int result = 0;
 	bool skip;
 	uint32_t i;
+	char* argvzero = argvp[0][0];
+
 	if(*argcp < 2)
 		return 0;
 
@@ -16,6 +29,10 @@ int32_t parse_options(int32_t* argcp, char*** argvp, parsing_ctx* options, uint3
 		if ((*argvp)[1][0] != '-' || (*argvp)[1][1] == '\0' || (*argvp)[1][2] != '\0')
 			return result;
 		for (i = 0, skip = false; i < nops && !skip; i++) {
+			if (((*argvp)[1][1]) == 'h') {
+				print_usage(argvzero, options, nops);
+				exit(0);
+			}
 			if (((*argvp)[1][1]) == options[i].opt_name) {
 
 				switch (options[i].type) {
@@ -54,14 +71,5 @@ int32_t parse_options(int32_t* argcp, char*** argvp, parsing_ctx* options, uint3
 			return 0;
 	}
 	return 1;
-}
-
-void print_usage(std::string progname, parsing_ctx* options, uint32_t nops) {
-	uint32_t i;
-	std::cout << "Usage: " << progname << std::endl;
-	for (i = 0; i < nops; i++) {
-		std::cout << " -" << options[i].opt_name << " [" << options[i].help_str << (options[i].required ? ", required" : ", optional") << "]" << std::endl;
-	}
-	std::cout << std::endl << "Program exiting" << std::endl;
 }
 

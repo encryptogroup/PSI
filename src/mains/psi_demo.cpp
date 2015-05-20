@@ -162,7 +162,6 @@ int32_t read_psi_demo_options(int32_t* argcp, char*** argvp, role_type* role, ps
 
 	if(!parse_options(argcp, argvp, options, sizeof(options)/sizeof(parsing_ctx))) {
 		print_usage(argvp[0][0], options, sizeof(options)/sizeof(parsing_ctx));
-		cout << "Exiting" << endl;
 		exit(0);
 	}
 
