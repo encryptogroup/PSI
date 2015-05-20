@@ -40,17 +40,19 @@ typedef struct hashing_state_ctx {
 static const uint32_t HF_MASKS[3] = {0x00000000, 0x33333333, 0x14894568};
 
 //use as mask to address the bits in a uint32_t vector
-static const uint32_t SELECT_BITS[33] = 	{0x00000000, 0x00000001, 0x00000003, 0x00000007, 0x0000000F, 0x0000001F, 0x0000003F, 0x0000007F, \
+static const uint32_t SELECT_BITS[33] = \
+									{0x00000000, 0x00000001, 0x00000003, 0x00000007, 0x0000000F, 0x0000001F, 0x0000003F, 0x0000007F, \
 									 0x000000FF, 0x000001FF, 0x000003FF, 0x000007FF, 0x00000FFF, 0x00001FFF, 0x00003FFF, 0x00007FFF, \
 									 0x0000FFFF, 0x0001FFFF, 0x0003FFFF, 0x0007FFFF, 0x000FFFFF, 0x001FFFFF, 0x003FFFFF, 0x007FFFFF, \
 									 0x00FFFFFF, 0x01FFFFFF, 0x03FFFFFF, 0x07FFFFFF, 0x0FFFFFFF, 0x1FFFFFFF, 0x3FFFFFFF, 0x7FFFFFFF, \
 									 0xFFFFFFFF };
 
 //can also be computed as SELECT_BITS ^ 0xFFFFFFFF
-static const uint32_t SELECT_BITS_INV[33] ={0xFFFFFFFF, 0xFFFFFFFE, 0xFFFFFFFC, 0xFFFFFFF8, 0xFFFFFFF0, 0xFFFFFFE0, 0xFFFFFFC0, 0xFFFFFF80, \
-									 0xFFFFFF00, 0xFFFFFFE00, 0xFFFFFC00, 0xFFFFF800, 0xFFFFF000, 0xFFFFE000, 0xFFFFC000, 0xFFFF8000, \
-									 0xFFFF0000, 0xFFFFE0000, 0xFFFC0000, 0xFFF80000, 0xFFF00000, 0xFFE00000, 0xFFC00000, 0xFF800000, \
-									 0xFF000000, 0xFFE000000, 0xFC000000, 0xF8000000, 0xF0000000, 0xE0000000, 0xC0000000, 0x80000000, \
+static const uint32_t SELECT_BITS_INV[33] = \
+									{0xFFFFFFFF, 0xFFFFFFFE, 0xFFFFFFFC, 0xFFFFFFF8, 0xFFFFFFF0, 0xFFFFFFE0, 0xFFFFFFC0, 0xFFFFFF80, \
+									 0xFFFFFF00, 0xFFFFFE00, 0xFFFFFC00, 0xFFFFF800, 0xFFFFF000, 0xFFFFE000, 0xFFFFC000, 0xFFFF8000, \
+									 0xFFFF0000, 0xFFFE0000, 0xFFFC0000, 0xFFF80000, 0xFFF00000, 0xFFE00000, 0xFFC00000, 0xFF800000, \
+									 0xFF000000, 0xFE000000, 0xFC000000, 0xF8000000, 0xF0000000, 0xE0000000, 0xC0000000, 0x80000000, \
 									 0x00000000 };
 
 
@@ -179,6 +181,7 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 
 inline void domain_hashing(uint32_t nelements, uint8_t* elements, uint32_t elebytelen, uint8_t* result,
 		uint32_t resultbytelen, crypto* crypt) {
+
 	uint8_t *eleptr, *resultptr, *hash_buf;
 	uint32_t i;
 
@@ -203,7 +206,7 @@ inline void domain_hashing(uint32_t nelements, uint8_t** elements, uint32_t* ele
 	//eleptr=elements;
 	resultptr = result;
 #ifndef BATCH
-	cout << "Hashing " << nelements << " elements from " << elebytelen << " bytes into " << resultbytelen << " bytes" << endl;
+	cout << "Hashing " << nelements << " elements from " << elebytelens << " bytes into " << resultbytelen << " bytes" << endl;
 #endif
 	//hash_buf = (uint8_t*) calloc(crypt->get_hash_bytes(), sizeof(uint8_t));
 	for(i = 0; i < nelements; i++, resultptr+=resultbytelen) {

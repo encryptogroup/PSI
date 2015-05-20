@@ -19,14 +19,14 @@ MIRACL_MAKE:=linux
 GNU_LIB_PATH:=i386
 endif
 
-INCLUDE=-I..  -I/usr/include/glib-2.0/ -I/usr/lib/${GNU_LIB_PATH}-linux-gnu/glib-2.0/include ${EXT}/miracl_lib/miracl.a
+INCLUDE=-I..  -I/usr/include/glib-2.0/ -I/usr/lib/${GNU_LIB_PATH}-linux-gnu/glib-2.0/include 
 
 
 LIBRARIES=-lgmp -lgmpxx -lpthread  -L /usr/lib  -lssl -lcrypto -lglib-2.0
 CFLAGS=
 
 # all source files and corresponding object files 
-SOURCES_CORE := $(shell find ${CORE} -type f -name '*.cpp' -not -path '*/Miracl/*')
+SOURCES_CORE := $(shell find ${CORE} -type f -name '*.cpp' -not -path '*/Miracl/*' -a -not -path '*/mains/*')
 OBJECTS_CORE := $(SOURCES_CORE:.cpp=.o)
 # directory for PSI related sources
 SOURCES_UTIL=${SRC}/util/*.cpp
@@ -54,14 +54,11 @@ OBJECTS_OTPSI=${SRC}/ot-based/*.o
 MIRACL_LIB_DIR=${EXT}/miracl_lib
 SOURCES_MIRACL=${EXT}/Miracl/*
 OBJECTS_MIRACL=${MIRACL_LIB_DIR}/*.o
+MIRACL_LIB=${EXT}/miracl_lib/miracl.a
 
 
-all: miracl core bench
+all: miracl core bench demo
 	@echo "make all done."
-
-bench: ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} 
-	${CC} -o psi.exe ${SRC}/mains/bench_psi.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${INCLUDE} ${COMPILER_OPTIONS}
-
 
 
 core: ${OBJECTS_CORE}
@@ -69,6 +66,11 @@ core: ${OBJECTS_CORE}
 %.o:%.cpp %.h
 	${CC} $< ${COMPILER_OPTIONS} -c ${INCLUDE} ${LIBRARIES} ${CFLAGS} ${BATCH} -o $@
 
+bench:  
+	${CC} -o psi.exe ${SRC}/mains/bench_psi.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${MIRACL_LIB} ${INCLUDE} ${COMPILER_OPTIONS}
+
+demo:  
+	${CC} -o demo.exe ${SRC}/mains/psi_demo.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${MIRACL_LIB} ${INCLUDE} ${COMPILER_OPTIONS}
 
 
 # this will create a copy of the files in ${SOURCES_MIRACL} and its sub-directories and put them into ${MIRACL_LIB_DIR} without sub-directories, then compile it
@@ -81,8 +83,8 @@ ${MIRACL_LIB_DIR}/miracl.a: ${SOURCES_MIRACL}
 
 # only clean example objects, test object and binaries
 clean:
-	rm -f ${OBJECTS_EXAMPLE} ${OBJECTS_TEST} ${BIN}/*.exe ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_CRYPTO} ${OBJECTS_OT}
+	rm -f ${OBJECTS_EXAMPLE} ${OBJECTS_TEST} *.exe ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_CRYPTO} ${OBJECTS_OT}
 
 # this will clean everything: example objects, test object and binaries and the Miracl library
-cleanall: cleanmore
+cleanall: clean
 	rm -f ${OBJECTS_MIRACL} ${MIRACL_LIB_DIR}/*.a
