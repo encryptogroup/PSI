@@ -1,9 +1,8 @@
 #include "ot-extension.h"
 
 
-
-
-BOOL OTExtensionReceiver::receive(int numOTs, int bitlength, CBitVector& choices, CBitVector& ret, BYTE type, int numThreads, MaskingFunction* unmaskfct)
+bool OTExtensionReceiver::receive(uint32_t numOTs, uint32_t bitlength, CBitVector& choices, CBitVector& ret,
+	uint8_t type, uint32_t numThreads, MaskingFunction* unmaskfct)
 {
 		m_nOTs = numOTs;
 		m_nBitLength = bitlength;
@@ -15,15 +14,15 @@ BOOL OTExtensionReceiver::receive(int numOTs, int bitlength, CBitVector& choices
 };
 
 //Initialize and start numThreads OTSenderThread
-BOOL OTExtensionReceiver::receive(int numThreads)
+bool OTExtensionReceiver::receive(uint32_t numThreads)
 {
 	if(m_nOTs == 0)
 		return true;
 
 	//The total number of OTs that is performed has to be a multiple of numThreads*Z_REGISTER_BITS
-	int internal_numOTs = CEIL_DIVIDE(PadToRegisterSize(m_nOTs), numThreads);
+	uint32_t internal_numOTs = ceil_divide(pad_to_multiple(m_nOTs, REGISTER_BITS), numThreads);
 
-	//BYTE go;
+	//uint8_t go;
 	//Wait for the signal of the corresponding sender thread
 	//sock.Receive(&go, 1);
 
@@ -31,7 +30,7 @@ BOOL OTExtensionReceiver::receive(int numThreads)
 	m_vTempOTMasks.Create(internal_numOTs * numThreads * m_nBitLength);
 
 	vector<OTReceiverThread*> rThreads(numThreads); 
-	for(int i = 0; i < numThreads; i++)
+	for(uint32_t i = 0; i < numThreads; i++)
 	{
 		rThreads[i] = new OTReceiverThread(i, internal_numOTs, this);
 		rThreads[i]->Start();
@@ -42,24 +41,24 @@ BOOL OTExtensionReceiver::receive(int numThreads)
 		ReceiveAndProcess(numThreads);
 	}
 
-	for(int i = 0; i < numThreads; i++)
+	for(uint32_t i = 0; i < numThreads; i++)
 	{
 		rThreads[i]->Wait();
 	}
 	m_nCounter += m_nOTs;
 
-	for(int i = 0; i < numThreads; i++)
+	for(uint32_t i = 0; i < numThreads; i++)
 		delete rThreads[i];
 
 	if(m_bProtocol == R_OT || m_bProtocol == OCRS_OT) {
-		m_nRet.Copy(m_vTempOTMasks.GetArr(), 0, CEIL_DIVIDE(m_nOTs * m_nBitLength, 8));
+		m_nRet.Copy(m_vTempOTMasks.GetArr(), 0, ceil_divide(m_nOTs * m_nBitLength, 8));
 		m_vTempOTMasks.delCBitVector();
 	}
 
 
 #ifdef VERIFY_OT
 	//Wait for the signal of the corresponding sender thread
-	BYTE finished = 0x01;
+	uint8_t finished = 0x01;
 	m_nSockets[0].Send(&finished, 1);
 
 	verifyOT(m_nOTs);
@@ -71,25 +70,25 @@ BOOL OTExtensionReceiver::receive(int numThreads)
 
 
 
-BOOL OTExtensionReceiver::OTReceiverRoutine(int id, int myNumOTs)
+bool OTExtensionReceiver::OTReceiverRoutine(uint32_t id, uint32_t myNumOTs)
 {
 	//cout << "Thread " << id << " started" << endl;
-	int myStartPos = id * myNumOTs;
-	int i = myStartPos, nProgress = myStartPos;
-	int RoundWindow = 2;
-	int roundctr = 0;
+	uint32_t myStartPos = id * myNumOTs;
+	uint32_t i = myStartPos, nProgress = myStartPos;
+	uint32_t RoundWindow = 2;
+	uint32_t roundctr = 0;
 
 	myNumOTs = min(myNumOTs + myStartPos, m_nOTs) - myStartPos;
-	int lim = myStartPos+myNumOTs;
+	uint32_t lim = myStartPos+myNumOTs;
 
-	int processedOTBlocks = min(NUMOTBLOCKS, CEIL_DIVIDE(myNumOTs, OTEXT_BLOCK_SIZE_BITS));
-	int OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
-	int OTwindow = NUMOTBLOCKS*OTEXT_BLOCK_SIZE_BITS*RoundWindow;
+	uint32_t processedOTBlocks = min((uint32_t) NUMOTBLOCKS, ceil_divide(myNumOTs, OTEXT_BLOCK_SIZE_BITS));
+	uint32_t OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
+	uint32_t OTwindow = NUMOTBLOCKS*OTEXT_BLOCK_SIZE_BITS*RoundWindow;
 	CSocket sock = m_nSockets[id];
 
 	//counter variables
-	int numblocks = CEIL_DIVIDE(myNumOTs, OTsPerIteration);
-	int nSize;
+	uint32_t numblocks = ceil_divide(myNumOTs, OTsPerIteration);
+	uint32_t nSize;
 
 	// The receive buffer
 	CBitVector vRcv;
@@ -106,14 +105,14 @@ BOOL OTExtensionReceiver::OTReceiverRoutine(int id, int myNumOTs)
 
 	// A temporary buffer that stores the resulting seeds from the hash buffer
 	//TODO: Check for some maximum size
-	CBitVector seedbuf(OTwindow*AES_KEY_BITS);// = new CBitVector[RoundWindow];
-	//for(int j = 0; j < RoundWindow; j++)
+	CBitVector seedbuf(OTwindow*m_cCrypto->get_aes_key_bytes() * 8);// = new CBitVector[RoundWindow];
+	//for(uint32_t j = 0; j < RoundWindow; j++)
 	//	seedbuf[j].Create(OTwindow * AES_KEY_BITS);
 
 
 
-	BYTE ctr_buf[AES_BYTES] = {0};
-	int* counter = (int*) ctr_buf;
+	uint8_t ctr_buf[AES_BYTES] = {0};
+	uint32_t* counter = (uint32_t*) ctr_buf;
 	(*counter) = myStartPos + m_nCounter;
 
 #ifdef OTTiming
@@ -123,7 +122,7 @@ BOOL OTExtensionReceiver::OTReceiverRoutine(int id, int myNumOTs)
 
 	while( i < lim )
 	{
-		processedOTBlocks = min(NUMOTBLOCKS, CEIL_DIVIDE(lim-i, OTEXT_BLOCK_SIZE_BITS));
+		processedOTBlocks = min((uint32_t) NUMOTBLOCKS, ceil_divide(lim-i, OTEXT_BLOCK_SIZE_BITS));
  		OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
 		nSize = (m_nSymSecParam>>3) * OTsPerIteration;
 
@@ -189,41 +188,49 @@ BOOL OTExtensionReceiver::OTReceiverRoutine(int id, int myNumOTs)
 
 
 
-void OTExtensionReceiver::BuildMatrices(CBitVector& T, CBitVector& SndBuf, int numblocks, int ctr, BYTE* ctr_buf)
+void OTExtensionReceiver::BuildMatrices(CBitVector& T, CBitVector& SndBuf, uint32_t numblocks, uint32_t ctr, uint8_t* ctr_buf)
 {
-	int* counter = (int*) ctr_buf;
-	int tempctr = (*counter);
+	uint32_t* counter = (uint32_t*) ctr_buf;
+	uint32_t tempctr = (*counter);
 
-	BYTE* Tptr = T.GetArr();
-	BYTE* sndbufptr = SndBuf.GetArr();
-	int ctrbyte = ctr/8;
-	for(int k = 0; k < m_nSymSecParam; k++)
+	uint8_t* Tptr = T.GetArr();
+	uint8_t* sndbufptr = SndBuf.GetArr();
+	uint32_t ctrbyte = ctr/8;
+	for(uint32_t k = 0; k < m_nSymSecParam; k++)
 	{
 		(*counter) = tempctr;
-		for(int b = 0; b < numblocks; b++, (*counter)++)
+		for(uint32_t b = 0; b < numblocks; b++, (*counter)++)
 		{
-			MPC_AES_ENCRYPT(m_vKeySeedMtx + 2*k, Tptr, ctr_buf);
+			//MPC_AES_ENCRYPT(m_vKeySeedMtx + 2*k, Tptr, ctr_buf);
+			m_cCrypto->encrypt(m_vKeySeedMtx + 2*k, Tptr, ctr_buf, AES_BYTES);
 			Tptr+=OTEXT_BLOCK_SIZE_BYTES;
 
-			MPC_AES_ENCRYPT(m_vKeySeedMtx + (2*k) + 1, sndbufptr, ctr_buf);
+			//MPC_AES_ENCRYPT(m_vKeySeedMtx + (2*k) + 1, sndbufptr, ctr_buf);
+			m_cCrypto->encrypt(m_vKeySeedMtx + (2*k) + 1, sndbufptr, ctr_buf, AES_BYTES);
 			sndbufptr+=OTEXT_BLOCK_SIZE_BYTES;
 		}
 		SndBuf.XORBytesReverse(m_nChoices.GetArr()+ctrbyte, k*OTEXT_BLOCK_SIZE_BYTES * numblocks, OTEXT_BLOCK_SIZE_BYTES * numblocks);
 	}
-	SndBuf.XORBytes(T.GetArr(), 0, OTEXT_BLOCK_SIZE_BYTES*numblocks*m_nSymSecParam);
+	SndBuf.XORBytes(T.GetArr(), (uint32_t) 0, OTEXT_BLOCK_SIZE_BYTES*numblocks*m_nSymSecParam);
 }
 
 
 
-void OTExtensionReceiver::HashValues(CBitVector& T, CBitVector& seedbuf, int ctr, int processedOTs)
+void OTExtensionReceiver::HashValues(CBitVector& T, CBitVector& seedbuf, uint32_t ctr, uint32_t processedOTs)
 {
-	BYTE* Tptr = T.GetArr();
-	BYTE* bufptr = seedbuf.GetArr();//m_vSeedbuf.GetArr() + ctr * AES_KEY_BYTES;//seedbuf.GetArr();
+	uint8_t* Tptr = T.GetArr();
+	uint8_t* bufptr = seedbuf.GetArr();//m_vSeedbuf.GetArr() + ctr * AES_KEY_BYTES;//seedbuf.GetArr();
 
-	HASH_CTX sha;
-	BYTE hash_buf[SHA1_BYTES];
+	//HASH_CTX sha;
+	uint32_t hashbytes = m_cCrypto->get_hash_bytes();
+	uint32_t hashinbytelen = (m_nSymSecParam>>3) + sizeof(uint32_t);
+	uint32_t aes_key_bytes = m_cCrypto->get_aes_key_bytes();
 
-	for(int i = ctr; i < ctr+processedOTs; i++, Tptr+=OTEXT_BLOCK_SIZE_BYTES, bufptr+=AES_KEY_BYTES)
+	uint8_t hash_buf[hashbytes];
+
+	uint8_t* inbuf = (uint8_t*) malloc(hashinbytelen);
+
+	for(uint32_t i = ctr; i < ctr+processedOTs; i++, Tptr+=OTEXT_BLOCK_SIZE_BYTES, bufptr+=aes_key_bytes)
 	{
 		if((m_bProtocol == S_OT || m_bProtocol == OCRS_OT) && m_nChoices.GetBitNoMask(i) == 0)
 		{
@@ -235,13 +242,17 @@ void OTExtensionReceiver::HashValues(CBitVector& T, CBitVector& seedbuf, int ctr
 #ifdef FIXED_KEY_AES_HASHING
 		FixedKeyHashing(m_kCRFKey, bufptr, Tptr, hash_buf, i, m_nSymSecParam>>3);
 #else
-		MPC_HASH_INIT(&sha);
-		MPC_HASH_UPDATE(&sha, (BYTE*) &i, sizeof(i));
-			//OTEXT_HASH_UPDATE(&sha, (BYTE*) &hash_ctr, sizeof(hash_ctr));
-		MPC_HASH_UPDATE(&sha, Tptr, m_nSymSecParam>>3);
-		MPC_HASH_FINAL(&sha, hash_buf);
+		//MPC_HASH_INIT(&sha);
+		//MPC_HASH_UPDATE(&sha, (uint8_t*) &i, sizeof(i));
+			//OTEXT_HASH_UPDATE(&sha, (uint8_t*) &hash_ctr, sizeof(hash_ctr));
+		//MPC_HASH_UPDATE(&sha, Tptr, m_nSymSecParam>>3);
+		//MPC_HASH_FINAL(&sha, hash_buf);
 		//}
-		memcpy(bufptr, hash_buf, AES_KEY_BYTES);
+		memcpy(inbuf, &i, sizeof(uint32_t));
+		memcpy(inbuf+sizeof(uint32_t), Tptr, m_nSymSecParam>>3);
+		m_cCrypto->hash(hash_buf, aes_key_bytes, inbuf, hashinbytelen);
+
+		memcpy(bufptr, hash_buf, aes_key_bytes);
 #endif
 
 
@@ -253,16 +264,16 @@ void OTExtensionReceiver::HashValues(CBitVector& T, CBitVector& seedbuf, int ctr
 }
 
 
-//void OTExtensionReceiver::ReceiveAndProcess(CBitVector& vRcv, CBitVector& seedbuf, int id, int ctr, int processedOTs)
-void OTExtensionReceiver::ReceiveAndProcess(int numThreads)
+//void OTExtensionReceiver::ReceiveAndProcess(CBitVector& vRcv, CBitVector& seedbuf, uint32_t id, uint32_t ctr, uint32_t processedOTs)
+void OTExtensionReceiver::ReceiveAndProcess(uint32_t numThreads)
 {
-	int progress = 0;
-	int threadOTs = CEIL_DIVIDE(PadToRegisterSize(m_nOTs), numThreads);
-	int processedOTBlocks = min(NUMOTBLOCKS, CEIL_DIVIDE(threadOTs, OTEXT_BLOCK_SIZE_BITS));
-	int OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
-	int processedOTs;
-	int OTid;
-	int rcvbytes;
+	uint32_t progress = 0;
+	uint32_t threadOTs = ceil_divide(pad_to_multiple(m_nOTs, REGISTER_BITS), numThreads);
+	uint32_t processedOTBlocks = min((uint32_t) NUMOTBLOCKS, ceil_divide(threadOTs, OTEXT_BLOCK_SIZE_BITS));
+	uint32_t OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
+	uint32_t processedOTs;
+	uint32_t OTid;
+	uint32_t rcvbytes;
 	CBitVector vRcv;
 
 #ifdef OTTiming
@@ -280,11 +291,11 @@ void OTExtensionReceiver::ReceiveAndProcess(int numThreads)
 		//cout << "Waiting for block " << endl;
 
 
-		m_nSockets[0].Receive((BYTE*) &OTid, sizeof(int));
+		m_nSockets[0].Receive((uint8_t*) &OTid, sizeof(uint32_t));
 		//cout << "Processing blockid " << OTid;
-		m_nSockets[0].Receive((BYTE*) &processedOTs, sizeof(int));
+		m_nSockets[0].Receive((uint8_t*) &processedOTs, sizeof(uint32_t));
 		//cout << " with " << processedOTs << " OTs ";
-		rcvbytes = CEIL_DIVIDE(processedOTs * m_nBitLength, 8);
+		rcvbytes = ceil_divide(processedOTs * m_nBitLength, 8);
 		if(m_bProtocol == G_OT)
 			rcvbytes = rcvbytes*m_nSndVals;
 		//cout << "Receiving " << rcvbytes << " bytes" << endl;
@@ -309,37 +320,37 @@ void OTExtensionReceiver::ReceiveAndProcess(int numThreads)
 	vRcv.delCBitVector();
 }
 
-BOOL OTExtensionReceiver::verifyOT(int NumOTs)
+bool OTExtensionReceiver::verifyOT(uint32_t NumOTs)
 {
 	CSocket sock = m_nSockets[0];
 	CBitVector vRcvX0(NUMOTBLOCKS*OTEXT_BLOCK_SIZE_BITS*m_nBitLength);
 	CBitVector vRcvX1(NUMOTBLOCKS*OTEXT_BLOCK_SIZE_BITS*m_nBitLength);
 	CBitVector* Xc;
-	int processedOTBlocks, OTsPerIteration;
-	int bytelen = CEIL_DIVIDE(m_nBitLength, 8);
-	BYTE* tempXc = new BYTE[bytelen];
-	BYTE* tempRet = new BYTE[bytelen];
-	BYTE resp;
-	for(int i = 0; i < NumOTs;)
+	uint32_t processedOTBlocks, OTsPerIteration;
+	uint32_t bytelen = ceil_divide(m_nBitLength, 8);
+	uint8_t* tempXc = new uint8_t[bytelen];
+	uint8_t* tempRet = new uint8_t[bytelen];
+	uint8_t resp;
+	for(uint32_t i = 0; i < NumOTs;)
 	{
-		processedOTBlocks = min(NUMOTBLOCKS, CEIL_DIVIDE(NumOTs-i, OTEXT_BLOCK_SIZE_BITS));
+		processedOTBlocks = min((uint32_t) NUMOTBLOCKS, ceil_divide(NumOTs-i, (uint32_t) OTEXT_BLOCK_SIZE_BITS));
  		//OTsPerIteration = processedOTBlocks * Z_REGISTER_BITS;
-		OTsPerIteration = min(processedOTBlocks * OTEXT_BLOCK_SIZE_BITS, NumOTs-i);
-		sock.Receive(vRcvX0.GetArr(), CEIL_DIVIDE(m_nBitLength * OTsPerIteration, 8));
-		sock.Receive(vRcvX1.GetArr(), CEIL_DIVIDE(m_nBitLength * OTsPerIteration, 8));
-		for(int j = 0; j < OTsPerIteration && i < NumOTs; j++, i++)
+		OTsPerIteration = min((uint32_t)processedOTBlocks * OTEXT_BLOCK_SIZE_BITS, NumOTs-i);
+		sock.Receive(vRcvX0.GetArr(), ceil_divide(m_nBitLength * OTsPerIteration, 8));
+		sock.Receive(vRcvX1.GetArr(), ceil_divide(m_nBitLength * OTsPerIteration, 8));
+		for(uint32_t j = 0; j < OTsPerIteration && i < NumOTs; j++, i++)
 		{
 			if(m_nChoices.GetBitNoMask(i) == 0) Xc = &vRcvX0;
 			else Xc = &vRcvX1;
 
 			Xc->GetBits(tempXc, j*m_nBitLength, m_nBitLength);
 			m_nRet.GetBits(tempRet, i*m_nBitLength, m_nBitLength);
-			for(int k = 0; k < bytelen; k++)
+			for(uint32_t k = 0; k < bytelen; k++)
 			{
 				if(tempXc[k] != tempRet[k])
 				{
-					cout << "Error at position i = " << i << ", k = " << k << ", with X" << (hex) << (unsigned int) m_nChoices.GetBitNoMask(i)
-							<< " = " << (unsigned int) tempXc[k] << " and res = " << (unsigned int) tempRet[k] << (dec) << endl;
+					cout << "Error at position i = " << i << ", k = " << k << ", with X" << (hex) << (uint32_t) m_nChoices.GetBitNoMask(i)
+							<< " = " << (uint32_t) tempXc[k] << " and res = " << (uint32_t) tempRet[k] << (dec) << endl;
 					resp = 0x00;
 					sock.Send(&resp, 1);
 					return false;
@@ -361,8 +372,8 @@ BOOL OTExtensionReceiver::verifyOT(int NumOTs)
 
 
 
-BOOL OTExtensionSender::send(int numOTs, int bitlength, CBitVector& x0, CBitVector& x1, BYTE type,
-		int numThreads, MaskingFunction* maskfct)
+bool OTExtensionSender::send(uint32_t numOTs, uint32_t bitlength, CBitVector& x0, CBitVector& x1, uint8_t type,
+		uint32_t numThreads, MaskingFunction* maskfct)
 {
 	m_nOTs = numOTs;
 	m_nBitLength = bitlength;
@@ -375,23 +386,23 @@ BOOL OTExtensionSender::send(int numOTs, int bitlength, CBitVector& x0, CBitVect
 
 
 //Initialize and start numThreads OTSenderThread
-BOOL OTExtensionSender::send(int numThreads)
+bool OTExtensionSender::send(uint32_t numThreads)
 {
 	if(m_nOTs == 0)
 		return true;
 
 	//The total number of OTs that is performed has to be a multiple of numThreads*Z_REGISTER_BITS
-	int numOTs = CEIL_DIVIDE(PadToRegisterSize(m_nOTs), numThreads);
+	uint32_t numOTs = ceil_divide(pad_to_multiple(m_nOTs, REGISTER_BITS), numThreads);
 	m_nBlocks = 0;
 	m_lSendLock = new CLock;
 
 
 	vector<OTSenderThread*> sThreads(numThreads); 
 
-	//BYTE go;
+	//uint8_t go;
 	//sock.Send(&go, 1);
 
-	for(int i = 0; i < numThreads; i++)
+	for(uint32_t i = 0; i < numThreads; i++)
 	{
 		sThreads[i] = new OTSenderThread(i, numOTs, this);
 		sThreads[i]->Start();
@@ -402,17 +413,17 @@ BOOL OTExtensionSender::send(int numThreads)
 		SendBlocks(numThreads);
 	}
 
-	for(int i = 0; i < numThreads; i++)
+	for(uint32_t i = 0; i < numThreads; i++)
 	{
 		sThreads[i]->Wait();
 	}
 	m_nCounter += m_nOTs;
 
-	for(int i = 0; i < numThreads; i++)
+	for(uint32_t i = 0; i < numThreads; i++)
 		delete sThreads[i];
 
 #ifdef VERIFY_OT
-	BYTE finished;
+	uint8_t finished;
 	m_nSockets[0].Receive(&finished, 1);
 
 	verifyOT(m_nOTs);
@@ -427,18 +438,18 @@ BOOL OTExtensionSender::send(int numThreads)
 }
 
 
-//BOOL OTsender(int nSndVals, int nOTs, int startpos, CSocket& sock, CBitVector& U, AES_KEY* vKeySeeds, CBitVector* values, BYTE* seed)
-BOOL OTExtensionSender::OTSenderRoutine(int id, int myNumOTs)
+//BOOL OTsender(uint32_t nSndVals, uint32_t nOTs, uint32_t startpos, CSocket& sock, CBitVector& U, AES_KEY* vKeySeeds, CBitVector* values, uint8_t* seed)
+bool OTExtensionSender::OTSenderRoutine(uint32_t id, uint32_t myNumOTs)
 {
 	CSocket sock = m_nSockets[id];
 
-	int nProgress;
-	int myStartPos = id * myNumOTs; 
-	int processedOTBlocks = min(NUMOTBLOCKS, CEIL_DIVIDE(myNumOTs, OTEXT_BLOCK_SIZE_BITS));
-	int OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
+	uint32_t nProgress;
+	uint32_t myStartPos = id * myNumOTs;
+	uint32_t processedOTBlocks = min((uint32_t) NUMOTBLOCKS, (uint32_t) ceil_divide(myNumOTs, OTEXT_BLOCK_SIZE_BITS));
+	uint32_t OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
 
 	myNumOTs = min(myNumOTs + myStartPos, m_nOTs) - myStartPos;
-	int lim = myStartPos+myNumOTs;
+	uint32_t lim = myStartPos+myNumOTs;
 
 	//TODO: Check if this works:
 	if(m_bProtocol == S_OT || m_bProtocol == OCRS_OT)
@@ -448,7 +459,7 @@ BOOL OTExtensionSender::OTSenderRoutine(int id, int myNumOTs)
 	CBitVector vRcv(m_nSymSecParam * OTsPerIteration);
 		
 	// Holds the reply that is sent back to the receiver
-	int numsndvals = 2;
+	uint32_t numsndvals = 2;
 	CBitVector* vSnd;
 
 	/*if(m_bProtocol == G_OT) numsndvals = 2;
@@ -456,13 +467,13 @@ BOOL OTExtensionSender::OTSenderRoutine(int id, int myNumOTs)
 	else numsndvals = 0;*/
 
 	CBitVector* seedbuf = new CBitVector[m_nSndVals];
-	for(int u = 0; u < m_nSndVals; u++)
-		seedbuf[u].Create(OTsPerIteration* AES_KEY_BITS);
+	for(uint32_t u = 0; u < m_nSndVals; u++)
+		seedbuf[u].Create(OTsPerIteration* m_cCrypto->get_aes_key_bytes() * 8);
 #ifdef ZDEBUG
 	cout << "seedbuf size = " <<OTsPerIteration * AES_KEY_BITS << endl;
 #endif
 	vSnd = new CBitVector[numsndvals];//(CBitVector*) malloc(sizeof(CBitVector) * numsndvals);
-	for(int i = 0; i < numsndvals; i++)
+	for(uint32_t i = 0; i < numsndvals; i++)
 	{
 		vSnd[i].Create(OTsPerIteration * m_nBitLength);
 	}
@@ -471,9 +482,9 @@ BOOL OTExtensionSender::OTSenderRoutine(int id, int myNumOTs)
 	CBitVector Q(OTEXT_BLOCK_SIZE_BITS * OTsPerIteration);
 	
 	// A buffer that holds a counting value, required for a faster interaction with the AES calls
-	BYTE ctr_buf[AES_BYTES];
+	uint8_t ctr_buf[AES_BYTES];
 	memset(ctr_buf, 0, AES_BYTES);
-	int* counter = (int*) ctr_buf;
+	uint32_t* counter = (uint32_t*) ctr_buf;
 	counter[0] = myStartPos + m_nCounter;
 	
 	nProgress = myStartPos;
@@ -486,7 +497,7 @@ BOOL OTExtensionSender::OTSenderRoutine(int id, int myNumOTs)
 	while( nProgress < lim ) //do while there are still transfers missing
 	{
 
-		processedOTBlocks = min(NUMOTBLOCKS, CEIL_DIVIDE(lim-nProgress, OTEXT_BLOCK_SIZE_BITS));
+		processedOTBlocks = min((uint32_t) NUMOTBLOCKS, ceil_divide(lim-nProgress, OTEXT_BLOCK_SIZE_BITS));
 		OTsPerIteration = processedOTBlocks * OTEXT_BLOCK_SIZE_BITS;
 
 #ifdef ZDEBUG
@@ -532,10 +543,10 @@ BOOL OTExtensionSender::OTSenderRoutine(int id, int myNumOTs)
 
 	vRcv.delCBitVector();
 	Q.delCBitVector();
-	for(int u = 0; u < m_nSndVals; u++)
+	for(uint32_t u = 0; u < m_nSndVals; u++)
 		seedbuf[u].delCBitVector();
 
-	for(int i = 0; i < numsndvals; i++)
+	for(uint32_t i = 0; i < numsndvals; i++)
 		vSnd[i].delCBitVector();
 	if(numsndvals > 0)	free(vSnd);
 
@@ -555,19 +566,20 @@ BOOL OTExtensionSender::OTSenderRoutine(int id, int myNumOTs)
 	return TRUE;
 }
 
-void OTExtensionSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, int numblocks, BYTE* ctr_buf)
+void OTExtensionSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, uint32_t numblocks, uint8_t* ctr_buf)
 {
-	BYTE* rcvbufptr = RcvBuf.GetArr();
-	BYTE* Tptr = T.GetArr();
-	int dummy;
-	int* counter = (int*) ctr_buf;
-	int tempctr = *counter;
-	for (int k = 0; k < m_nSymSecParam; k++, rcvbufptr += (OTEXT_BLOCK_SIZE_BYTES * numblocks))
+	uint8_t* rcvbufptr = RcvBuf.GetArr();
+	uint8_t* Tptr = T.GetArr();
+	uint32_t dummy;
+	uint32_t* counter = (uint32_t*) ctr_buf;
+	uint32_t tempctr = *counter;
+	for (uint32_t k = 0; k < m_nSymSecParam; k++, rcvbufptr += (OTEXT_BLOCK_SIZE_BYTES * numblocks))
 	{
 		*counter = tempctr;
-		for(int b = 0; b < numblocks; b++, (*counter)++, Tptr += OTEXT_BLOCK_SIZE_BYTES)
+		for(uint32_t b = 0; b < numblocks; b++, (*counter)++, Tptr += OTEXT_BLOCK_SIZE_BYTES)
 		{
-			MPC_AES_ENCRYPT(m_vKeySeeds + k, Tptr, ctr_buf);
+			//MPC_AES_ENCRYPT(m_vKeySeeds + k, Tptr, ctr_buf);
+			m_cCrypto->encrypt(m_vKeySeeds + k, Tptr, ctr_buf, AES_BYTES);
 		}
 		if(m_nU.GetBit(k))
 		{
@@ -576,21 +588,26 @@ void OTExtensionSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, int numb
 	}
 }
 
-void OTExtensionSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVector* snd_buf, int ctr, int processedOTs)
+void OTExtensionSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVector* snd_buf, uint32_t ctr, uint32_t processedOTs)
 {
-	int numhashiters = CEIL_DIVIDE(m_nBitLength, SHA1_BITS);
-	HASH_CTX sha, shatmp;
+	uint32_t hashbytes = m_cCrypto->get_hash_bytes();
 
-	BYTE hash_buf[SHA1_BYTES];
+	uint32_t numhashiters = ceil_divide(m_nBitLength, hashbytes*8);
+	//HASH_CTX sha, shatmp;
+
+	uint8_t hash_buf[hashbytes];
 	//SHA_BUFFER sha_buf;
-	BYTE* Qptr = Q.GetArr();
+	uint8_t* Qptr = Q.GetArr();
+	uint32_t hashinbytelen = (m_nSymSecParam>>3) + sizeof(uint32_t);
 
-	BYTE** sbp = new BYTE*[m_nSndVals];
+	uint8_t** sbp = new uint8_t*[m_nSndVals];
+	uint8_t* inbuf = (uint8_t*) malloc(hashinbytelen);
+	uint32_t aes_key_bytes = m_cCrypto->get_aes_key_bytes();
 
-	for(int u = 0; u < m_nSndVals; u++)
+	for(uint32_t u = 0; u < m_nSndVals; u++)
 		sbp[u] = seedbuf[u].GetArr();
 
-	for(int i = ctr, j = 0; j<processedOTs; i++, j++)
+	for(uint32_t i = ctr, j = 0; j<processedOTs; i++, j++)
 	{
 		if(m_bProtocol == OCRS_OT && m_vValues[0].GetBitNoMask(i) == 0)
 		{
@@ -598,11 +615,11 @@ void OTExtensionSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVecto
 		}
 
 #ifndef FIXED_KEY_AES_HASHING
-		MPC_HASH_INIT(&sha);
-		MPC_HASH_UPDATE(&sha, (BYTE*) &i, sizeof(i));
-		shatmp = sha;
+		//MPC_HASH_INIT(&sha);
+		//MPC_HASH_UPDATE(&sha, (uint8_t*) &i, sizeof(i));
+		//shatmp = sha;
 #endif
-		for(int u = 0; u < m_nSndVals; u++)
+		for(uint32_t u = 0; u < m_nSndVals; u++)
 		{
 			//omit zero possibility
 			//if( || m_bProtocol == OCRS_OT)
@@ -613,18 +630,23 @@ void OTExtensionSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVecto
 				Q.XORBytes(m_nU.GetArr(), j * OTEXT_BLOCK_SIZE_BYTES, m_nSymSecParam>>3);
 
 #ifdef FIXED_KEY_AES_HASHING
-			//AES_KEY_CTX* aeskey, BYTE* outbuf, BYTE* inbuf, BYTE* tmpbuf, int id, int bytessecparam
+			//AES_KEY_CTX* aeskey, uint8_t* outbuf, uint8_t* inbuf, uint8_t* tmpbuf, uint32_t id, uint32_t bytessecparam
 			FixedKeyHashing(m_kCRFKey, sbp[u], Q.GetArr() + j * OTEXT_BLOCK_SIZE_BYTES, hash_buf, i, m_nSymSecParam>>3);
 #else
-			sha = shatmp;
-			MPC_HASH_UPDATE(&sha, Q.GetArr()+j * OTEXT_BLOCK_SIZE_BYTES, m_nSymSecParam>>3);
-			MPC_HASH_FINAL(&sha, hash_buf);
+			//sha = shatmp;
+			//MPC_HASH_UPDATE(&sha, Q.GetArr()+j * OTEXT_BLOCK_SIZE_BYTES, m_nSymSecParam>>3);
+			//MPC_HASH_FINAL(&sha, hash_buf);
+			memcpy(inbuf, &i, sizeof(uint32_t));
+			memcpy(inbuf+sizeof(uint32_t), Q.GetArr() + j * OTEXT_BLOCK_SIZE_BYTES, m_nSymSecParam>>3);
+			m_cCrypto->hash(hash_buf, aes_key_bytes, inbuf, hashinbytelen);
+			//memcpy(sbp[u], resbuf, aes_key_bytes);
 
-			memcpy(sbp[u], hash_buf, AES_KEY_BYTES);
+
+			memcpy(sbp[u], hash_buf, aes_key_bytes);
 #endif
 
-			//cout << ((unsigned int) sbp[u][0] & 0x01);
-			sbp[u] += AES_KEY_BYTES;
+			//cout << ((unsigned uint32_t) sbp[u][0] & 0x01);
+			sbp[u] += aes_key_bytes;
 
 			if(m_bProtocol == S_OT || m_bProtocol == OCRS_OT)
 			{
@@ -640,11 +662,13 @@ void OTExtensionSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVecto
 	}
 
 	//Two calls to expandMask, both writing into snd_buf
-	for(int u = 0; u < m_nSndVals; u++)
+	for(uint32_t u = 0; u < m_nSndVals; u++)
 		m_fMaskFct->expandMask(snd_buf[u], seedbuf[u].GetArr(), 0, processedOTs, m_nBitLength);
+
+	free(inbuf);
 }
 
-void OTExtensionSender::ProcessAndEnqueue(CBitVector* snd_buf, int id, int progress, int processedOTs)
+void OTExtensionSender::ProcessAndEnqueue(CBitVector* snd_buf, uint32_t id, uint32_t progress, uint32_t processedOTs)
 {
 	//cout << "processed OTs: " << processedOTs << endl;
 	m_fMaskFct->Mask(progress, processedOTs, m_vValues, snd_buf, m_bProtocol);
@@ -653,7 +677,7 @@ void OTExtensionSender::ProcessAndEnqueue(CBitVector* snd_buf, int id, int progr
 		return;
 
 	OTBlock* block = new OTBlock;
-	int bufsize = CEIL_DIVIDE(processedOTs * m_nBitLength, 8);
+	uint32_t bufsize = ceil_divide(processedOTs * m_nBitLength, 8);
 
 	block->blockid = progress;
 	block->processedOTs = processedOTs;
@@ -661,18 +685,18 @@ void OTExtensionSender::ProcessAndEnqueue(CBitVector* snd_buf, int id, int progr
 
 	if(m_bProtocol == G_OT)
 	{
-		block->snd_buf = new BYTE[bufsize<<1];
+		block->snd_buf = new uint8_t[bufsize<<1];
 		memcpy(block->snd_buf, snd_buf[0].GetArr(), bufsize);
 		memcpy(block->snd_buf+bufsize, snd_buf[1].GetArr(), bufsize);
 	}
 	else if(m_bProtocol == C_OT)
 	{
-		block->snd_buf = new BYTE[bufsize];
+		block->snd_buf = new uint8_t[bufsize];
 		memcpy(block->snd_buf, snd_buf[1].GetArr(), bufsize);
 	}
 	else if(m_bProtocol == S_OT)
 	{
-		block->snd_buf = new BYTE[bufsize];
+		block->snd_buf = new uint8_t[bufsize];
 		memcpy(block->snd_buf, snd_buf[0].GetArr(), bufsize);
 	}
 
@@ -692,9 +716,9 @@ void OTExtensionSender::ProcessAndEnqueue(CBitVector* snd_buf, int id, int progr
 }
 
 
-void OTExtensionSender::SendBlocks(int numThreads)
+void OTExtensionSender::SendBlocks(uint32_t numThreads)
 {
-	int progress = 0;
+	uint32_t progress = 0;
 	OTBlock* tempBlock;
 
 #ifdef OTTiming
@@ -712,21 +736,21 @@ void OTExtensionSender::SendBlocks(int numThreads)
 			tempBlock = m_sBlockHead;
 			if(m_bProtocol == G_OT)
 			{
-				m_nSockets[0].Send((BYTE*) &(tempBlock->blockid), sizeof(int));
-				m_nSockets[0].Send((BYTE*) &(tempBlock->processedOTs), sizeof(int));
-				m_nSockets[0].Send(tempBlock->snd_buf, 2*CEIL_DIVIDE((tempBlock->processedOTs) * m_nBitLength, 8));
+				m_nSockets[0].Send((uint8_t*) &(tempBlock->blockid), sizeof(uint32_t));
+				m_nSockets[0].Send((uint8_t*) &(tempBlock->processedOTs), sizeof(uint32_t));
+				m_nSockets[0].Send(tempBlock->snd_buf, 2*ceil_divide((tempBlock->processedOTs) * m_nBitLength, 8));
 			}
 			else if(m_bProtocol == C_OT)
 			{
-				m_nSockets[0].Send((BYTE*) &(tempBlock->blockid), sizeof(int));
-				m_nSockets[0].Send((BYTE*) &(tempBlock->processedOTs), sizeof(int));
-				m_nSockets[0].Send(tempBlock->snd_buf, CEIL_DIVIDE((tempBlock->processedOTs) * m_nBitLength, 8));
+				m_nSockets[0].Send((uint8_t*) &(tempBlock->blockid), sizeof(uint32_t));
+				m_nSockets[0].Send((uint8_t*) &(tempBlock->processedOTs), sizeof(uint32_t));
+				m_nSockets[0].Send(tempBlock->snd_buf, ceil_divide((tempBlock->processedOTs) * m_nBitLength, 8));
 			}
 			else if(m_bProtocol == S_OT)
 			{
-				m_nSockets[0].Send((BYTE*) &(tempBlock->blockid), sizeof(int));
-				m_nSockets[0].Send((BYTE*) &(tempBlock->processedOTs), sizeof(int));
-				m_nSockets[0].Send(tempBlock->snd_buf, CEIL_DIVIDE((tempBlock->processedOTs) * m_nBitLength, 8));
+				m_nSockets[0].Send((uint8_t*) &(tempBlock->blockid), sizeof(uint32_t));
+				m_nSockets[0].Send((uint8_t*) &(tempBlock->processedOTs), sizeof(uint32_t));
+				m_nSockets[0].Send(tempBlock->snd_buf, ceil_divide((tempBlock->processedOTs) * m_nBitLength, 8));
 			}
 			//Lock this part
 			m_sBlockHead = m_sBlockHead->next;
@@ -753,23 +777,23 @@ void OTExtensionSender::SendBlocks(int numThreads)
 
 
 
-BOOL OTExtensionSender::verifyOT(int NumOTs)
+bool OTExtensionSender::verifyOT(uint32_t NumOTs)
 {
 	CSocket sock = m_nSockets[0];
 	CBitVector vSnd(NUMOTBLOCKS*OTEXT_BLOCK_SIZE_BITS*m_nBitLength);
-	int processedOTBlocks, OTsPerIteration;
-	int bytelen = CEIL_DIVIDE(m_nBitLength, 8);
-	int nSnd;
-	BYTE resp;
-	for(int i = 0; i < NumOTs;i+=OTsPerIteration)
+	uint32_t processedOTBlocks, OTsPerIteration;
+	uint32_t bytelen = ceil_divide(m_nBitLength, 8);
+	uint32_t nSnd;
+	uint8_t resp;
+	for(uint32_t i = 0; i < NumOTs;i+=OTsPerIteration)
 	{
-		processedOTBlocks = min(NUMOTBLOCKS, CEIL_DIVIDE(NumOTs-i, OTEXT_BLOCK_SIZE_BITS));
+		processedOTBlocks = min((uint32_t) NUMOTBLOCKS, ceil_divide(NumOTs-i, OTEXT_BLOCK_SIZE_BITS));
  		OTsPerIteration = min(processedOTBlocks * OTEXT_BLOCK_SIZE_BITS, NumOTs-i);
- 		nSnd = CEIL_DIVIDE(OTsPerIteration * m_nBitLength, 8);
- 		//cout << "copying " << nSnd << " bytes from " << CEIL_DIVIDE(i*m_nBitLength, 8) << ", for i = " << i << endl;
- 		vSnd.Copy(m_vValues[0].GetArr() + CEIL_DIVIDE(i*m_nBitLength, 8), 0, nSnd);
+ 		nSnd = ceil_divide(OTsPerIteration * m_nBitLength, 8);
+ 		//cout << "copying " << nSnd << " bytes from " << ceil_divide(i*m_nBitLength, 8) << ", for i = " << i << endl;
+ 		vSnd.Copy(m_vValues[0].GetArr() + ceil_divide(i*m_nBitLength, 8), 0, nSnd);
  		sock.Send(vSnd.GetArr(), nSnd);
- 		vSnd.Copy(m_vValues[1].GetArr() + CEIL_DIVIDE(i*m_nBitLength, 8), 0, nSnd);
+ 		vSnd.Copy(m_vValues[1].GetArr() + ceil_divide(i*m_nBitLength, 8), 0, nSnd);
  		sock.Send(vSnd.GetArr(), nSnd);
 		sock.Receive(&resp, 1);
 		if(resp == 0x00)

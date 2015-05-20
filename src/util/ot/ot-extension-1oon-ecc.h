@@ -24,23 +24,23 @@
 //#define DEBUG_HASH_OUTPUT
 
 
-class OTExtension1ooNECCSender : public OTExtSnd {
+class OTExtension1ooNECCSender : public OTExtensionSender {
 /*
  * OT sender part
  * Input: 
- * ret: returns the resulting bit representations. Has to initialized to a byte size of: nOTs * nSndVals * state.field_size
+ * ret: returns the resulting bit representations. Has to initialized to a uint8_t size of: nOTs * nSndVals * state.field_size
  * 
  * CBitVector* values: holds the values to be transferred. If C_OT is enabled, the first dimension holds the value while the delta is written into the second dimension
  * Output: was the execution successful?
  */
   public:
 	OTExtension1ooNECCSender(uint32_t sndvals, uint32_t nOTs, uint32_t bitlength, crypto* crypt, CSocket* sock, CBitVector& U, uint8_t* keybytes,
-			CBitVector& x0, CBitVector& x1,	uint8_t type) : OTExtSnd(sndvals, nOTs, bitlength, crypt, sock, U, keybytes, x0, x1, type, m_nCodeWordBits){
+			CBitVector& x0, CBitVector& x1,	uint8_t type) : OTExtensionSender(sndvals, nOTs, bitlength, crypt, sock, U, keybytes, x0, x1, type, m_nCodeWordBits){
 		InitAndReadCodeWord(&m_vCodeWords);
 	};
 
 	OTExtension1ooNECCSender(uint32_t nsndvals, crypto* crypt, CSocket* sock, CBitVector& U, uint8_t* keybytes) :
-		OTExtSnd(nsndvals, crypt, sock, U, keybytes, m_nCodeWordBits) {
+		OTExtensionSender(nsndvals, crypt, sock, U, keybytes, m_nCodeWordBits) {
 		InitAndReadCodeWord(&m_vCodeWords);
 	};
 
@@ -72,7 +72,7 @@ class OTExtension1ooNECCSender : public OTExtSnd {
 
 
 
-class OTExtension1ooNECCReceiver : public OTExtRec {
+class OTExtension1ooNECCReceiver : public OTExtensionReceiver {
 /*
  * OT receiver part
  * Input: 
@@ -87,11 +87,11 @@ class OTExtension1ooNECCReceiver : public OTExtRec {
   public:
 	OTExtension1ooNECCReceiver(uint32_t nsndvals, uint32_t nOTs, uint32_t bitlength, crypto* crypt, CSocket* sock,
 			uint8_t* keybytes, CBitVector& choices, CBitVector& ret, uint8_t protocol) :
-			OTExtRec(nsndvals, nOTs, bitlength, crypt, sock, keybytes, choices, ret, protocol, m_nCodeWordBits) {
+				OTExtensionReceiver(nsndvals, nOTs, bitlength, crypt, sock, keybytes, choices, ret, protocol, m_nCodeWordBits) {
 		InitAndReadCodeWord(&m_vCodeWords);
 	};
 	OTExtension1ooNECCReceiver(uint32_t nsndvals, crypto* crypt, CSocket* sock, uint8_t* keybytes) :
-		OTExtRec(nsndvals, crypt, sock, keybytes, m_nCodeWordBits) {
+		OTExtensionReceiver(nsndvals, crypt, sock, keybytes, m_nCodeWordBits) {
 		InitAndReadCodeWord(&m_vCodeWords);
 	};
 

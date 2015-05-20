@@ -54,7 +54,7 @@ static const uint8_t fixedkeyseed[2*AES_BYTES] = {0x00, 0x11, 0x22, 0x33, 0x44, 
 #endif
 
 
-class OTExtSnd {
+class OTExtensionSender {
 /*
  * OT sender part
  * Input: 
@@ -75,7 +75,7 @@ class OTExtSnd {
 		m_vValues[0] = x0;
 		m_vValues[1] = x1;
 		m_nBitLength = bitlength;
-		m_eOTFlav = type;
+		m_bProtocol = type;
 		//m_nCounter = 0;
 		//m_nSymSecParam = symsecparam;
 		//m_vKeySeeds = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * m_nSymSecParam);
@@ -110,7 +110,7 @@ class OTExtSnd {
 #endif
 	};
 
-	~OTExtSnd(){free(m_vKeySeeds);};
+	~OTExtensionSender(){free(m_vKeySeeds);};
 	bool send(uint32_t numOTs, uint32_t bitlength, CBitVector& s0, CBitVector& s1, uint8_t type, uint32_t numThreads, MaskingFunction* maskfct);
 	bool send(uint32_t numThreads);
 
@@ -118,8 +118,9 @@ class OTExtSnd {
 	void BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, uint32_t blocksize, uint8_t* ctr);
 	void ProcessAndEnqueue(CBitVector* snd_buf, uint32_t id, uint32_t progress, uint32_t processedOTs);
 	void SendBlocks(uint32_t numThreads);
-	void HashValues(CBitVector& Q, CBitVector* seedbuf, CBitVector* snd_buf, uint32_t ctr, uint32_t processedOTs);
+	//void HashValues(CBitVector& Q, CBitVector* seedbuf, CBitVector* snd_buf, uint32_t ctr, uint32_t processedOTs);
 	bool verifyOT(uint32_t myNumOTs);
+	void MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVector* snd_buf, uint32_t ctr, uint32_t processedOTs);
 
 
 
@@ -146,13 +147,13 @@ class OTExtSnd {
 
 	class OTSenderThread : public CThread {
 	 	public:
-	 		OTSenderThread(uint32_t id, uint32_t nOTs, OTExtSnd* ext) {senderID = id; numOTs = nOTs; callback = ext; success = false;};
+	 		OTSenderThread(uint32_t id, uint32_t nOTs, OTExtensionSender* ext) {senderID = id; numOTs = nOTs; callback = ext; success = false;};
 	 		~OTSenderThread(){};
 			void ThreadMain() {success = callback->OTSenderRoutine(senderID, numOTs);};
 		private: 
 			uint32_t senderID;
 			uint32_t numOTs;
-			OTExtSnd* callback;
+			OTExtensionSender* callback;
 			bool success;
 	};
 
@@ -160,7 +161,7 @@ class OTExtSnd {
 
 
 
-class OTExtRec {
+class OTExtensionReceiver {
 /*
  * OT receiver part
  * Input: 
@@ -182,7 +183,7 @@ class OTExtRec {
 		m_nRet = ret;
 		//m_nSeed = seed;
 		m_nBitLength = bitlength;
-		m_eOTFlav = protocol;
+		m_bProtocol = protocol;
 		//m_nCounter = 0;
 		//m_nSymSecParam = symsecparam;
 		//m_vKeySeedMtx = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * m_nSymSecParam * nSndVals);
@@ -217,7 +218,7 @@ class OTExtRec {
 #endif
 	}
 
-	~OTExtRec(){free(m_vKeySeedMtx); };
+	~OTExtensionReceiver(){free(m_vKeySeedMtx); };
 
 	bool receive(uint32_t numOTs, uint32_t bitlength, CBitVector& choices, CBitVector& ret, uint8_t type,
 			uint32_t numThreads, MaskingFunction* maskfct);
@@ -231,7 +232,7 @@ class OTExtRec {
 	bool verifyOT(uint32_t myNumOTs);
 
   protected:
-	uint8_t m_eOTFlav;
+	uint8_t m_bProtocol;
   	uint32_t m_nSndVals;
   	uint32_t m_nOTs;
   	uint32_t m_nBitLength;
@@ -253,13 +254,13 @@ class OTExtRec {
 
 	class OTReceiverThread : public CThread {
 	 	public:
-	 		OTReceiverThread(uint32_t id, uint32_t nOTs, OTExtRec* ext) {receiverID = id; numOTs = nOTs; callback = ext; success = false;};
+	 		OTReceiverThread(uint32_t id, uint32_t nOTs, OTExtensionReceiver* ext) {receiverID = id; numOTs = nOTs; callback = ext; success = false;};
 	 		~OTReceiverThread(){};
 			void ThreadMain() {success = callback->OTReceiverRoutine(receiverID, numOTs);};
 		private: 
 			uint32_t receiverID;
 			uint32_t numOTs;
-			OTExtRec* callback;
+			OTExtensionReceiver* callback;
 			bool success;
 	};
 

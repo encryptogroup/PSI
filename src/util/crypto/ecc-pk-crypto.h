@@ -10,9 +10,9 @@
 
 #include "pk-crypto.h"
 
-#include "../../Miracl/ecn.h"
-#include "../../Miracl/big.h"
-#include "../../Miracl/ec2.h"
+#include "../../externals/miracl_lib/ecn.h"
+#include "../../externals/miracl_lib/big.h"
+#include "../../externals/miracl_lib/ec2.h"
 
 
 #define fe2ec2(fieldele) (((ecc_fe*) (fieldele))->get_val())
