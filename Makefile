@@ -44,8 +44,8 @@ OBJECTS_NAIVE=${SRC}/naive-hashing/*.o
 SOURCES_DHPSI=${SRC}/pk-based/*.cpp
 OBJECTS_DHPSI=${SRC}/pk-based/*.o
 # third-party-based PSI
-SOURCES_THIRDPARTY=${SRC}/thirdparty-based/*.cpp
-OBJECTS_THIRDPARTY=${SRC}/thirdparty-based/*.o
+SOURCES_SERVERAIDED=${SRC}/server-aided/*.cpp
+OBJECTS_SERVERAIDED=${SRC}/server-aided/*.o
 # OT-based PSI
 SOURCES_OTPSI=${SRC}/ot-based/*.cpp
 OBJECTS_OTPSI=${SRC}/ot-based/*.o
@@ -67,10 +67,10 @@ core: ${OBJECTS_CORE}
 	${CC} $< ${COMPILER_OPTIONS} -c ${INCLUDE} ${LIBRARIES} ${CFLAGS} ${BATCH} -o $@
 
 bench:  
-	${CC} -o psi.exe ${SRC}/mains/bench_psi.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${MIRACL_LIB} ${INCLUDE} ${COMPILER_OPTIONS}
+	${CC} -o psi.exe ${SRC}/mains/bench_psi.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_SERVERAIDED} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${MIRACL_LIB} ${INCLUDE} ${COMPILER_OPTIONS}
 
 demo:  
-	${CC} -o demo.exe ${SRC}/mains/psi_demo.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${MIRACL_LIB} ${INCLUDE} ${COMPILER_OPTIONS}
+	${CC} -o demo.exe ${SRC}/mains/psi_demo.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_SERVERAIDED} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${MIRACL_LIB} ${INCLUDE} ${COMPILER_OPTIONS}
 
 
 # this will create a copy of the files in ${SOURCES_MIRACL} and its sub-directories and put them into ${MIRACL_LIB_DIR} without sub-directories, then compile it
@@ -83,7 +83,7 @@ ${MIRACL_LIB_DIR}/miracl.a: ${SOURCES_MIRACL}
 
 # only clean example objects, test object and binaries
 clean:
-	rm -f ${OBJECTS_EXAMPLE} ${OBJECTS_TEST} *.exe ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_THIRDPARTY} ${OBJECTS_UTIL} ${OBJECTS_CRYPTO} ${OBJECTS_OT}
+	rm -f ${OBJECTS_EXAMPLE} ${OBJECTS_TEST} *.exe ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_SERVERAIDED} ${OBJECTS_UTIL} ${OBJECTS_CRYPTO} ${OBJECTS_OT}
 
 # this will clean everything: example objects, test object and binaries and the Miracl library
 cleanall: clean

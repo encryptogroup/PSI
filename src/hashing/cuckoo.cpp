@@ -34,23 +34,9 @@ uint8_t* cuckoo_hashing(uint8_t* elements, uint32_t neles, uint32_t nbins, uint3
 	entry_gen_tasks = (pthread_t*) malloc(sizeof(pthread_t) * ntasks);
 	ctx = (cuckoo_entry_gen_ctx*) malloc(sizeof(cuckoo_entry_gen_ctx) * ntasks);
 
-	//use the number of bins as address bits
-	//addr_bits = ceil_log2(nbins);
-	//cout << "Using addr_bits: " << hs.addrbitlen << endl;
-	//cout << "number of bins: " << nbins << ", address bits = " << addr_bits << endl;
-	//the remaining bits form the size of the values
-
-	//inbytelen = ceil_divide(bitlen, 8);
-	//outbytelen = ceil_divide(outbitlen, 8);
-	//dummy_ele = (uint8_t*) malloc(ceil_divide(bitlen, 8));
-
 	for(i = 0; i < ntasks; i++) {
 		ctx[i].elements = elements;
 		ctx[i].cuckoo_entries = cuckoo_entries;
-		//ctx[i].inbitlen = bitlen;
-	//	ctx[i].addr_bitlen = addr_bits;
-		//ctx[i].outbitlen = outbitlen;
-		//ctx[i].nbins = nbins;
 		ctx[i].hs = &hs;
 		ctx[i].startpos = i * ceil_divide(neles, ntasks);
 		ctx[i].endpos = min(ctx[i].startpos + ceil_divide(neles, ntasks), neles);
@@ -60,11 +46,6 @@ uint8_t* cuckoo_hashing(uint8_t* elements, uint32_t neles, uint32_t nbins, uint3
 			exit(0);
 		}
 	}
-
-	//generate the cuckoo entries for all elements
-	//for(i = 0; i < neles; i++) {
-	//	gen_cuckoo_entry(elements + inbytelen * i, bitlen, addr_bits, cuckoo_entries + i, outbitlen, nbins, i);
-	//}
 
 	for(i = 0; i < ntasks; i++) {
 		if(pthread_join(entry_gen_tasks[i], NULL)) {

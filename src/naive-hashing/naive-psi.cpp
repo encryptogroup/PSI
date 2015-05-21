@@ -55,16 +55,12 @@ uint32_t naivepsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx
 
 	maskbytelen = ceil_divide(crypt_env->get_seclvl().statbits + ceil_log2(neles) + ceil_log2(pneles), 8);
 
-	//permeles = (uint8_t*) malloc(sizeof(uint8_t) * neles * elebytelen);
 	hashes = (uint8_t*) malloc(sizeof(uint8_t) * neles * maskbytelen);
 	perm  = (uint32_t*) malloc(sizeof(uint32_t) * neles);
 
 
 	/* Generate the random permutation the elements */
 	crypt_env->gen_rnd_perm(perm, neles);
-	//for(i = 0; i < neles; i++) {
-	//	memcpy(permeles + perm[i] * elebytelen,  elements + i * elebytelen, elebytelen);
-	//}
 
 	/* Hash and permute elements */
 #ifdef DEBUG
@@ -122,115 +118,5 @@ uint32_t naivepsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx
 
 	return intersect_size;
 }
-
-
-
-/*uint32_t find_intersection_naive(uint8_t* hashes, uint32_t neles, uint8_t* phashes, uint32_t pneles,
-		uint32_t hashbytelen, uint32_t* perm, uint32_t* matches) {
-
-	uint32_t* invperm = (uint32_t*) malloc(sizeof(uint32_t) * neles);
-	//uint32_t* matches = (uint32_t*) malloc(sizeof(uint32_t) * neles);
-	uint64_t* tmpval;
-
-	uint32_t size_intersect, i, intersect_ctr;
-
-	for(i = 0; i < neles; i++) {
-		invperm[perm[i]] = i;
-	}
-	//cout << "My number of elements. " << neles << ", partner number of elements: " << pneles << ", maskbytelen: " << hashbytelen << endl;
-
-	GHashTable *map= g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, NULL);
-	for(i = 0; i < neles; i++) {
-		g_hash_table_insert(map,(void*) ((uint64_t*) &(hashes[i*hashbytelen])), &(invperm[i]));
-	}
-
-	//for(i = 0; i < pneles; i++) {
-	//	((uint64_t*) &(phashes[i*hashbytelen]))[0]++;
-	//}
-
-	for(i = 0, intersect_ctr = 0; i < pneles; i++) {
-
-		if(g_hash_table_lookup_extended(map, (void*) ((uint64_t*) &(phashes[i*hashbytelen])),
-		    				NULL, (void**) &tmpval)) {
-			matches[intersect_ctr] = tmpval[0];
-			intersect_ctr++;
-			assert(intersect_ctr <= min(neles, pneles));
-		}
-	}
-
-	size_intersect = intersect_ctr;
-
-	//result = (uint8_t**) malloc(sizeof(uint8_t*));
-	//(*result) = (uint8_t*) malloc(sizeof(uint8_t) * size_intersect * elebytelen);
-	//for(i = 0; i < size_intersect; i++) {
-	//	memcpy((*result) + i * elebytelen, elements + matches[i] * elebytelen, elebytelen);
-	//}
-
-	free(invperm);
-	//free(matches);
-	return size_intersect;
-}*/
-
-/*void snd_and_rcv_naive(uint8_t* snd_buf, uint32_t snd_bytes, uint8_t* rcv_buf, uint32_t rcv_bytes, CSocket* sock) {
-	pthread_t snd_task;
-	bool created, joined;
-	snd_ctx ctx;
-
-	//Start new sender thread
-	ctx.sock = sock;
-	ctx.snd_buf = snd_buf;
-	ctx.snd_bytes = snd_bytes;
-	created = !pthread_create(&snd_task, NULL, send_data, (void*) &(ctx));
-
-	//receive
-	sock->Receive(rcv_buf, rcv_bytes);
-	assert(created);
-
-	joined = !pthread_join(snd_task, NULL);
-	assert(joined);
-}*/
-
-/*void run_task_naive(uint32_t nthreads, task_ctx context, void* (*func)(void*) ) {
-
-	task_ctx* contexts = (task_ctx*) malloc(sizeof(task_ctx) * nthreads);
-	pthread_t* threads = (pthread_t*) malloc(sizeof(pthread_t) * nthreads);
-	uint32_t i, neles_thread, electr, neles_cur;
-	bool created, joined;
-
-	neles_thread = ceil_divide(context.eles.nelements, nthreads);
-	for(i = 0, electr = 0; i < nthreads; i++) {
-		neles_cur = min(context.eles.nelements - electr, neles_thread);
-		memcpy(contexts + i, &context, sizeof(task_ctx));
-		//contexts[i].eles.nelements = neles_cur;
-		contexts[i].eles.startelement = electr;
-		contexts[i].eles.endelement = electr + neles_cur;
-		//contexts[i].eles.input = context.eles.input + (context.eles.inbytelen * electr);
-		//contexts[i].eles.output = context.eles.output + (context.eles.outbytelen * electr);
-		electr += neles_cur;
-	}
-
-	for(i = 0; i < nthreads; i++) {
-		created = !pthread_create(threads + i, NULL, func, (void*) &(contexts[i]));
-	}
-
-	assert(created);
-
-	for(i = 0; i < nthreads; i++) {
-		joined = !pthread_join(threads[i], NULL);
-	}
-
-	assert(joined);
-
-	free(threads);
-	free(contexts);
-}*/
-
-
-
-/*void *send_data_naive(void* context) {
-	snd_ctx_naive *ctx = (snd_ctx_naive*) context;
-	ctx->sock->Send(ctx->snd_buf, ctx->snd_bytes);
-	return 0;
-}*/
 
 

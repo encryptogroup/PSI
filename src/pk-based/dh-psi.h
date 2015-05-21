@@ -17,38 +17,6 @@
 #include "../util/helpers.h"
 
 
-/*struct element_ctx {
-	uint32_t nelements;
-	uint32_t inbytelen;
-	uint8_t* input;
-	uint32_t outbytelen;
-	uint8_t* output;
-};*/
-
-/*struct encrypt_ctx {
-	num* exponent;
-	pk_crypto* field;
-	bool sample;
-};*/
-
-//struct hash_ctx {
-//	crypto* symcrypt;
-//};
-
-/*struct task_ctx {
-	element_ctx eles;
-	union {
-		hash_ctx hctx;
-		encrypt_ctx ectx;
-	};
-};*/
-
-/*struct snd_ctx {
-	uint8_t* snd_buf;
-	uint32_t snd_bytes;
-	CSocket* sock;
-};*/
-
 uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t* elebytelens, uint8_t** elements,
 		uint8_t*** result, uint32_t** resbytelens, crypto* crypt_env, CSocket* sock, uint32_t ntasks,
 		bool cardinality=false, field_type ftype=ECC_FIELD);
@@ -59,18 +27,7 @@ uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebyte
 
 
 uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx, crypto* crypt_env, CSocket* sock,
-		uint32_t ntasks, uint32_t* matches, bool cardinality=false,	field_type ftype=ECC_FIELD);
-//void run_task(uint32_t nthreads, task_ctx context, void* (*func)(void*) );
-//void permute(uint32_t nelements, uint32_t bytelen, uint8_t* elements, uint8_t* result, uint32_t* perm);
-//uint32_t find_intersection(uint8_t* elements, uint8_t** result, uint32_t elebytelen, uint8_t* hashes,
-//		uint32_t neles, uint8_t* phashes, uint32_t peles, uint32_t hashbytelen, uint32_t* perm);
-//void snd_and_rcv(uint8_t* snd_buf, uint32_t snd_bytes, uint8_t* rcv_buf, uint32_t rcv_bytes, CSocket* sock);
-//void *encrypt(void* context);
-//void *hash(void* context);
-//void *send_data(void* context);
-
-
-
+		uint32_t ntasks, uint32_t* matches, bool cardinality=false, field_type ftype=ECC_FIELD);
 
 
 #endif /* DH_PSI_H_ */

@@ -10,7 +10,7 @@
 
 #include "../pk-based/dh-psi.h"
 #include "../ot-based/ot-psi.h"
-#include "../thirdparty-based/shpsi.h"
+#include "../server-aided/sapsi.h"
 #include "../naive-hashing/naive-psi.h"
 #include <fstream>
 #include <iostream>
