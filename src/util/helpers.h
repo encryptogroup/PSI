@@ -31,12 +31,12 @@ struct element_ctx {
 	bool hasvarbytelen;
 };
 
-struct hash_ctx {
+struct sym_ctx {
 	crypto* symcrypt;
-
+	uint8_t* keydata;
 };
 
-struct encrypt_ctx {
+struct asym_ctx {
 	num* exponent;
 	pk_crypto* field;
 	bool sample;
@@ -45,8 +45,8 @@ struct encrypt_ctx {
 struct task_ctx {
 	element_ctx eles;
 	union {
-		hash_ctx hctx;
-		encrypt_ctx ectx;
+		sym_ctx sctx;
+		asym_ctx actx;
 	};
 };
 
@@ -108,20 +108,20 @@ static void create_result_from_matches_fixed_bitlen(uint8_t** result, uint32_t i
 	}
 }
 
-static void *encrypt(void* context) {
+static void *asym_encrypt(void* context) {
 #ifdef DEBUG
 	cout << "Encryption task started" << endl;
 #endif
-	pk_crypto* field = ((task_ctx*) context)->ectx.field;
+	pk_crypto* field = ((task_ctx*) context)->actx.field;
 	element_ctx electx = ((task_ctx*) context)->eles;
-	num* e = ((task_ctx*) context)->ectx.exponent;
+	num* e = ((task_ctx*) context)->actx.exponent;
 	fe* tmpfe = field->get_fe();
 	uint8_t *inptr=electx.input1d, *outptr=electx.output;
 	uint32_t i;
 
 
 	for(i = 0; i < electx.nelements; i++, inptr+=electx.fixedbytelen, outptr+=electx.outbytelen) {
-		if(((task_ctx*) context)->ectx.sample) {
+		if(((task_ctx*) context)->actx.sample) {
 			tmpfe->sample_fe_from_bytes(inptr, electx.fixedbytelen);
 			//cout << "Mapped " << ((uint32_t*) inptr)[0] << " to ";
 		} else {
@@ -135,29 +135,71 @@ static void *encrypt(void* context) {
 	return 0;
 }
 
-static void *hash(void* context) {
+static void *sym_encrypt(void* context) {
 #ifdef DEBUG
 	cout << "Hashing thread started" << endl;
 #endif
-	hash_ctx hdata = ((task_ctx*) context)->hctx;
+	sym_ctx hdata = ((task_ctx*) context)->sctx;
 	element_ctx electx = ((task_ctx*) context)->eles;
 
 	crypto* crypt_env = hdata.symcrypt;
 
+	AES_KEY_CTX aes_key;
+	//cout << "initializing key" << endl;
+	crypt_env->init_aes_key(&aes_key, hdata.keydata);
+	//cout << "initialized key" << endl;
+
+	uint8_t* aes_buf = (uint8_t*) malloc(AES_BYTES);
 	uint32_t* perm = electx.perm;
 	uint32_t i;
 
 	if(electx.hasvarbytelen) {
 		uint8_t **inptr = electx.input2d;
 		for(i = electx.startelement; i < electx.endelement; i++) {
-			crypt_env->hash(electx.output+perm[i]*electx.outbytelen, electx.outbytelen, inptr[i], electx.varbytelens[i]);
+			//crypt_env->hash(electx.output+perm[i]*electx.outbytelen, electx.outbytelen, inptr[i], electx.varbytelens[i]);
+			//cout << "encrypting i = " << i << ", perm = " << perm [i] << ", outbytelen = " << electx.outbytelen << endl;
+			crypt_env->encrypt(&aes_key, aes_buf, inptr[i], electx.varbytelens[i]);
+			memcpy(electx.output+perm[i]*electx.outbytelen, aes_buf, electx.outbytelen);
 		}
 	} else {
 		uint8_t *inptr = electx.input1d;
 		for(i = electx.startelement; i < electx.endelement; i++, inptr+=electx.fixedbytelen) {
-			crypt_env->hash(electx.output+perm[i]*electx.outbytelen, electx.outbytelen, inptr, electx.fixedbytelen);
+			//crypt_env->hash(&aes_key, electx.output+perm[i]*electx.outbytelen, electx.outbytelen, inptr, electx.fixedbytelen);
+			crypt_env->encrypt(&aes_key, aes_buf, inptr, electx.fixedbytelen);
+			memcpy(electx.output+perm[i]*electx.outbytelen, aes_buf, electx.outbytelen);
 		}
 	}
+
+	//cout << "Returning" << endl;
+	//free(aes_buf);
+	return 0;
+}
+
+static void *hash(void* context) {
+#ifdef DEBUG
+	cout << "Hashing thread started" << endl;
+#endif
+	sym_ctx hdata = ((task_ctx*) context)->sctx;
+	element_ctx electx = ((task_ctx*) context)->eles;
+
+	crypto* crypt_env = hdata.symcrypt;
+
+	uint32_t* perm = electx.perm;
+	uint32_t i;
+	uint8_t* tmphashbuf = (uint8_t*) malloc(crypt_env->get_hash_bytes());
+
+	if(electx.hasvarbytelen) {
+		uint8_t **inptr = electx.input2d;
+		for(i = electx.startelement; i < electx.endelement; i++) {
+			crypt_env->hash(electx.output+perm[i]*electx.outbytelen, electx.outbytelen, inptr[i], electx.varbytelens[i], tmphashbuf);
+		}
+	} else {
+		uint8_t *inptr = electx.input1d;
+		for(i = electx.startelement; i < electx.endelement; i++, inptr+=electx.fixedbytelen) {
+			crypt_env->hash(electx.output+perm[i]*electx.outbytelen, electx.outbytelen, inptr, electx.fixedbytelen, tmphashbuf);
+		}
+	}
+	free(tmphashbuf);
 	return 0;
 }
 
@@ -198,8 +240,6 @@ static void run_task(uint32_t nthreads, task_ctx context, void* (*func)(void*) )
 		neles_cur = min(context.eles.nelements - electr, neles_thread);
 		memcpy(contexts + i, &context, sizeof(task_ctx));
 		contexts[i].eles.nelements = neles_cur;
-		//contexts[i].eles.input = context.eles.input + (context.eles.inbytelen * electr);
-		//contexts[i].eles.output = context.eles.output + (context.eles.outbytelen * electr);
 		contexts[i].eles.startelement = electr;
 		contexts[i].eles.endelement = electr + neles_cur;
 		electr += neles_cur;
@@ -228,7 +268,6 @@ static uint32_t find_intersection(uint8_t* hashes, uint32_t neles, uint8_t* phas
 		uint32_t hashbytelen, uint32_t* perm, uint32_t* matches) {
 
 	uint32_t* invperm = (uint32_t*) malloc(sizeof(uint32_t) * neles);
-	//uint32_t* matches = (uint32_t*) malloc(sizeof(uint32_t) * neles);
 	uint64_t* tmpval;
 
 	uint32_t size_intersect, i, intersect_ctr;
@@ -236,16 +275,11 @@ static uint32_t find_intersection(uint8_t* hashes, uint32_t neles, uint8_t* phas
 	for(i = 0; i < neles; i++) {
 		invperm[perm[i]] = i;
 	}
-	//cout << "My number of elements. " << neles << ", partner number of elements: " << pneles << ", maskbytelen: " << hashbytelen << endl;
 
 	GHashTable *map= g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, NULL);
 	for(i = 0; i < neles; i++) {
 		g_hash_table_insert(map,(void*) ((uint64_t*) &(hashes[i*hashbytelen])), &(invperm[i]));
 	}
-
-	//for(i = 0; i < pneles; i++) {
-	//	((uint64_t*) &(phashes[i*hashbytelen]))[0]++;
-	//}
 
 	for(i = 0, intersect_ctr = 0; i < pneles; i++) {
 
@@ -259,14 +293,7 @@ static uint32_t find_intersection(uint8_t* hashes, uint32_t neles, uint8_t* phas
 
 	size_intersect = intersect_ctr;
 
-	//result = (uint8_t**) malloc(sizeof(uint8_t*));
-	//(*result) = (uint8_t*) malloc(sizeof(uint8_t) * size_intersect * elebytelen);
-	//for(i = 0; i < size_intersect; i++) {
-	//	memcpy((*result) + i * elebytelen, elements + matches[i] * elebytelen, elebytelen);
-	//}
-
 	free(invperm);
-	//free(matches);
 	return size_intersect;
 }
 

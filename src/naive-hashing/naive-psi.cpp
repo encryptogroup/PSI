@@ -73,8 +73,7 @@ uint32_t naivepsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx
 	ectx.eles.nelements = neles;
 	ectx.eles.output = hashes;
 	ectx.eles.perm = perm;
-
-	ectx.hctx.symcrypt = crypt_env;
+	ectx.sctx.symcrypt = crypt_env;
 
 	run_task(ntasks, ectx, hash);
 

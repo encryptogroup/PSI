@@ -120,13 +120,13 @@ void crypto::gen_rnd_uniform(uint8_t* resbuf, uint64_t mod) {
 void crypto::encrypt(AES_KEY_CTX* enc_key, uint8_t* resbuf, uint8_t* inbuf, uint32_t ninbytes) {
 	int32_t dummy;
 	EVP_EncryptUpdate(enc_key, resbuf, &dummy, inbuf, ninbytes);
-	//EVP_EncryptFinal_ex(enc_key, resbuf, &dummy);
+	EVP_EncryptFinal_ex(enc_key, resbuf, &dummy);
 }
 void crypto::decrypt(AES_KEY_CTX* dec_key, uint8_t* resbuf, uint8_t* inbuf, uint32_t ninbytes) {
 	int32_t dummy;
 	//cout << "inbuf = " << (hex) << ((uint64_t*) inbuf)[0] << ((uint64_t*) inbuf)[1] << (dec) << endl;
 	EVP_DecryptUpdate(dec_key, resbuf, &dummy, inbuf, ninbytes);
-	//EVP_DecryptFinal_ex(dec_key, resbuf, &dummy);
+	EVP_DecryptFinal_ex(dec_key, resbuf, &dummy);
 	//cout << "outbuf = " << (hex) << ((uint64_t*) resbuf)[0] << ((uint64_t*) resbuf)[1] << (dec) << " (" << dummy << ")" << endl;
 }
 
@@ -210,6 +210,10 @@ void crypto::hash_ctr(uint8_t* resbuf, uint32_t noutbytes, uint8_t* inbuf, uint3
 
 void crypto::hash(uint8_t* resbuf, uint32_t noutbytes, uint8_t* inbuf, uint32_t ninbytes) {
 	hash_routine(resbuf, noutbytes, inbuf, ninbytes, sha_hash_buf);
+}
+
+void crypto::hash(uint8_t* resbuf, uint32_t noutbytes, uint8_t* inbuf, uint32_t ninbytes, uint8_t* tmpbuf) {
+	hash_routine(resbuf, noutbytes, inbuf, ninbytes, tmpbuf);
 }
 
 

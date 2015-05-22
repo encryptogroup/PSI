@@ -6,8 +6,8 @@ void server_routine(uint32_t nclients, CSocket* socket, bool cardinality) {
 	CSocket* sockfds = socket;//(CSocket*) malloc(sizeof(CSocket) * nclients);
 	uint32_t* neles = (uint32_t*) malloc(sizeof(uint32_t) * nclients);
 	uint8_t** csets = (uint8_t**) malloc(sizeof(uint8_t*) * nclients);
-	uint8_t* intersect;
-	uint32_t temp, maskbytelen, intersectsize, minset, i;
+	uint32_t temp, maskbytelen, intersectsize, minset, i, j;
+	CBitVector* intersection = new CBitVector[nclients];
 
 #ifndef BATCH
 	cout << "Connections with all " << nclients << " clients established" << endl;
@@ -19,16 +19,17 @@ void server_routine(uint32_t nclients, CSocket* socket, bool cardinality) {
 		sockfds[i].Receive(&temp, sizeof(uint32_t));
 		if(i == 0) { maskbytelen = temp; minset = neles[i];}
 		if(neles[i] < minset) minset = neles[i];
-		assert(maskbytelen == temp);
 #ifndef BATCH
 		cout << "Client " << i << " holds " << neles[i] << " elements of length " << (temp * 8) << "-bit" << endl;
 #endif
+		intersection[i].ResizeinBytes(ceil_divide(neles[i], 8));
+		intersection[i].Reset();
+		assert(maskbytelen == temp);
+
 	}
 #ifndef BATCH
 	cout <<"Receiving the client's elements" << endl;
 #endif
-	/* Allocate sufficient size for the intersecting elements */
-	intersect = (uint8_t*) malloc(sizeof(uint8_t*) * minset * maskbytelen);
 
 	/* Receive the permuted and masked sets of all clients */
 	for(i = 0; i < nclients; i++) {
@@ -40,7 +41,10 @@ void server_routine(uint32_t nclients, CSocket* socket, bool cardinality) {
 	cout << "Computing intersection for the clients" << endl;
 #endif
 	/* Compute Intersection */
-	intersectsize = compute_intersection(nclients, neles, csets, intersect, maskbytelen);
+	intersectsize = compute_intersection(nclients, neles, csets, intersection, maskbytelen);
+
+
+	/* Enter at which position an intersection was found */
 #ifndef BATCH
 	cout << "sending all " << intersectsize << " intersecting elements to the clients" << endl;
 #endif
@@ -48,7 +52,7 @@ void server_routine(uint32_t nclients, CSocket* socket, bool cardinality) {
 	for(i = 0; i < nclients; i++) {
 		sockfds[i].Send(&intersectsize, sizeof(uint32_t));
 		if(!cardinality)
-			sockfds[i].Send(intersect, intersectsize * maskbytelen);
+			sockfds[i].Send(intersection[i].GetArr(), ceil_divide(neles[i], 8));
 	}
 
 	/* Cleanup */
@@ -60,7 +64,7 @@ void server_routine(uint32_t nclients, CSocket* socket, bool cardinality) {
  * for the n-party case a BF-based approach makes more sense.
  */
 //TODO currently only works for 128 bit masks
-uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** csets, uint8_t* intersect, uint32_t entrybytelen) {
+uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** csets, CBitVector* intersection, uint32_t entrybytelen) {
     // Create the GHashTable
     GHashTable *map = NULL, *tmpmap = NULL;
     GHashTableIter iter;
@@ -72,9 +76,10 @@ uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** cset
 		    NULL // cleanup value
 		    );
 
-    uint32_t i, j, intersectsize, ctr = 0;
-    uint64_t* tmpval = (uint64_t*) malloc(sizeof(uint64_t));
+    uint32_t i, j, intersectsize, ctr = 0, k;
+    uint64_t* tmpval;
     uint64_t* tmpkey = (uint64_t*) malloc(sizeof(uint64_t));
+    uint64_t* query;
 #ifndef BATCH
     cout << "Inserting the items into the hash table " << endl;
 #endif
@@ -83,7 +88,10 @@ uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** cset
 #ifdef DEBUG
     	cout << "Inserted item: " << (hex) << ((uint64_t*) csets[0])[2*i] << " "<< ((uint64_t*) csets[0])[2*i+1] << (dec) << endl;
 #endif
-	    g_hash_table_insert(map,(void*) &((uint64_t*)csets[0])[2*i], &(((uint64_t*)csets[0])[2*i+1]));
+    	tmpval = (uint64_t*) malloc(2*sizeof(uint64_t));
+    	tmpval[0] = (((uint64_t*)csets[0])[2*i+1]);
+    	tmpval[1] = i;
+	    g_hash_table_insert(map,(void*) &((uint64_t*)csets[0])[2*i], tmpval);//&(((uint64_t*)csets[0])[2*i+1]));
     }
 #ifdef DEBUG
     g_hash_table_foreach( map, printKeyValue, NULL );
@@ -108,11 +116,17 @@ uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** cset
     		cout << "Checking for Key: " << (hex) << ((uint64_t*) csets[i])[2*j] << " "<< ((uint64_t*) csets[i])[2*j+1] << (dec) << endl;
 #endif
     		if(g_hash_table_lookup_extended(map, (void*) &(((uint64_t*)csets[i])[2*j]),
-    				NULL, (void**) &tmpval) && (*tmpval == ((uint64_t*)csets[i])[2*j+1])) {
+    				NULL, (void**) &query) && (*query == ((uint64_t*)csets[i])[2*j+1])) {
 #ifdef DEBUG
     			cout << "Key was found" << endl;
 #endif
-    			g_hash_table_insert(tmpmap,(void*) &(((uint64_t*)csets[i])[2*j]),&(((uint64_t*)csets[i])[2*j+1]));
+    	    	tmpval = (uint64_t*) malloc((i+2)*sizeof(uint64_t));
+    	    	tmpval[0] = (((uint64_t*)csets[i])[2*j+1]);
+    	    	for(k = 1; k < i+1; k++) {
+    	    		tmpval[k] = query[k];
+    	    	}
+    	    	tmpval[i+1] = j;
+    			g_hash_table_insert(tmpmap,(void*) &(((uint64_t*)csets[i])[2*j]), tmpval);//&(((uint64_t*)csets[i])[2*j+1]));
 
     		} else {
 #ifdef DEBUG
@@ -143,8 +157,9 @@ uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** cset
 #ifdef DEBUG
     	cout << (hex) << tmpkey[0] << " " << tmpval[0] << (dec)<< endl;
 #endif
-    	((uint64_t*) intersect)[ctr++] = tmpkey[0];
-    	((uint64_t*) intersect)[ctr++] = tmpval[0];
+    	for(i = 0; i < nclients; i++) {
+    		intersection[i].SetBit(tmpval[i+1], 1);
+    	}
     }
     gettimeofday(&end, NULL);
 #ifdef TIMING
@@ -162,69 +177,54 @@ uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** cset
 }
 
 
-uint32_t client_routine(uint32_t neles, uint32_t elebytelen, uint8_t* elements,
-		uint8_t** result, crypto* crypt, CSocket* socket, bool cardinality) {
-	uint32_t maskbytelen = 16, intersectsize, i, j;
-	uint8_t* masks = (uint8_t*) malloc(sizeof(uint8_t) * neles * maskbytelen);
-	uint8_t* intersect = (uint8_t*) malloc(sizeof(uint8_t) * neles * maskbytelen);
-	uint32_t* perm;
-	uint32_t* invperm = (uint32_t*) malloc(sizeof(uint32_t) * neles);
-
-	uint32_t* tmpval = (uint32_t*) malloc(sizeof(uint32_t));
-	GHashTable *map;
-
-	//crypto crypto(symsecbits, (uint8_t*) const_seed);
-
-//	cout << "Starting client with " << neles << " elements of " << (8*elebytelen) << "-bit length with server "
-//			<< address << ":" << port << endl;
-
-	CSocket* sockfd = socket;
-	//connect(address, port, sockfd);
-	sockfd->Send((uint8_t*) &neles, sizeof(uint32_t));
-	sockfd->Send((uint8_t*) &maskbytelen, sizeof(uint32_t));
+uint32_t client_routine(uint32_t neles, task_ctx ectx, uint32_t* matches,
+		crypto* crypt_env, CSocket* socket, uint32_t ntasks, bool cardinality) {
+	uint32_t maskbytelen, intersectsize, i, matchctr;
 
 
-	perm = mask_and_permute_elements(neles, elebytelen, elements, maskbytelen, masks, crypt->get_seclvl().symbits, crypt);
+	uint8_t* masks;
+	uint32_t *perm, *invperm;
+	CBitVector inIntersection(neles);
 
-	sockfd->Send(masks, maskbytelen * neles);
+	//TODO works only fine for equally sized sets, if one set is bigger than the other, this will fail!
+	maskbytelen = 16;//ceil_divide(crypt_env->get_seclvl().statbits + 2*ceil_log2(neles), 8);
 
-	if(!cardinality) {
-		for(i = 0; i < neles; i++) {
-			invperm[perm[i]] = i;
-		}
+	masks = (uint8_t*) malloc(sizeof(uint8_t) * neles * maskbytelen);
+	perm  = (uint32_t*) malloc(sizeof(uint32_t) * neles);
+	invperm = (uint32_t*) malloc(sizeof(uint32_t) * neles);
 
-		map= g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, NULL);
-		for(i = 0; i < neles; i++) {
-			g_hash_table_insert(map,(void*) &((uint64_t*)masks)[2*i], &(invperm[i]));
-		}
+	/* Generate the random permutation the elements */
+	crypt_env->gen_rnd_perm(perm, neles);
+
+	socket->Send((uint8_t*) &neles, sizeof(uint32_t));
+	socket->Send((uint8_t*) &maskbytelen, sizeof(uint32_t));
+
+	ectx.eles.outbytelen = maskbytelen,
+	ectx.eles.nelements = neles;
+	ectx.eles.output = masks;
+	ectx.eles.perm = perm;
+	ectx.sctx.symcrypt = crypt_env;
+	ectx.sctx.keydata = (uint8_t*) const_seed;
+
+	run_task(ntasks, ectx, hash);
+
+	socket->Send(masks, maskbytelen * neles);
+
+	socket->Receive(&intersectsize, sizeof(uint32_t));
+
+	for(i = 0; i < neles; i++) {
+		invperm[perm[i]] = i;
 	}
 
-
-	sockfd->Receive(&intersectsize, sizeof(uint32_t));
 	if(!cardinality) {
-		sockfd->Receive(intersect, maskbytelen * intersectsize);
+		socket->Receive(inIntersection.GetArr(), ceil_divide(neles, 8));
 
-#ifdef DEBUG
-		cout << "The intersection contains " << intersectsize << " elements: " << endl;
-		for(i = 0; i < intersectsize; i++) {
-			cout << (hex) << ((uint64_t*)intersect)[2*i] << " " << ((uint64_t*)intersect)[2*i+1] << (dec) << endl;
+		for(i = 0, matchctr = 0; i < neles; i++) {
+			if(inIntersection.GetBit(i)) {
+				matches[matchctr] = invperm[i];
+				matchctr++;
+			}
 		}
-#endif
-
-		*result = (uint8_t*) malloc(elebytelen * intersectsize);
-		//uint8_t* tmpbuf = (uint8_t*) malloc(maskbytelen);
-		for(i = 0; i < intersectsize; i++) {
-			g_hash_table_lookup_extended(map, (void*) &(((uint64_t*)intersect)[2*i]), NULL, (void**) &tmpval);
-			memcpy((*result) + i * elebytelen, elements + tmpval[0] * elebytelen, elebytelen);
-			//crypto.decrypt(tmpbuf, intersect+i*maskbytelen, maskbytelen);
-			//memcpy((*result) + i * elebytelen, tmpbuf, elebytelen);
-#ifdef DEBUG
-			cout << ((uint32_t*) elements)[tmpval[0]] << ", ";
-#endif
-		}
-#ifdef DEBUG
-	cout << endl;
-#endif
 	}
 
 	free(perm);
@@ -233,51 +233,52 @@ uint32_t client_routine(uint32_t neles, uint32_t elebytelen, uint8_t* elements,
 	return intersectsize;
 }
 
-
-void printKeyValue( gpointer key, gpointer value, gpointer userData ) {
-	uint64_t realKey = *((uint64_t*)key);
-	uint64_t realValue = *((uint64_t*)value);
-
-	cout << (hex) << realKey << ": "  << realValue << (dec) << endl;
-	return;
-}
-
-uint32_t* mask_and_permute_elements(uint32_t neles, uint32_t elebytelen, uint8_t*
-		elements, uint32_t maskbytelen, uint8_t* masks, uint32_t symsecbits, crypto* crypto) {
-	uint32_t* perm = (uint32_t*) malloc(sizeof(uint32_t) * neles);
-	uint8_t* maskpermptr;
-	uint32_t i;
-
-	//Get random permutation
-	crypto->gen_rnd_perm(perm, neles);
-	//crypto->seed_aes_enc(client_psk);
-
-	//Hash and permute all elements
-	for(i = 0; i < neles; i++) {
-		//cout << "Performing encryption for " << i << "-th element " << ((uint32_t*) elements)[i] << ": ";
-		maskpermptr = masks + perm[i] * maskbytelen;
-		crypto->hash(maskpermptr, maskbytelen, elements + i * elebytelen, elebytelen);
-		//crypto->encrypt(maskpermptr, elements+i*elebytelen, elebytelen);
-		//cout <<(hex)<< ((uint64_t*) maskpermptr)[0] << ((uint64_t*) maskpermptr)[1] << (dec) << endl;
-#ifdef DEBUG
-		cout << "Resulting hash for element " << ((uint32_t*)elements)[i] << ": " << (hex) << ((uint64_t*) maskpermptr)[0] <<
-				" " << ((uint64_t*) maskpermptr)[1] << (dec) <<  endl;
-#endif
-	}
-
-
-	//free(perm);
-	return perm;
-}
-
 uint32_t ttppsi(role_type role, uint32_t neles, uint32_t elebytelen, uint8_t* elements,
-		uint8_t** intersection, crypto* crypt, CSocket* sockets, uint32_t nclients, bool cardinality) {
+		uint8_t** result, crypto* crypt, CSocket* sockets, uint32_t ntasks, uint32_t nclients, bool cardinality) {
 
 	if(role == 0) { //Start the server
 		//TODO maybe rerun infinitely
 		server_routine(nclients, sockets, cardinality);
 		return 0;
 	} else { //Start clients
-		return client_routine(neles, elebytelen, elements, intersection, crypt, sockets, cardinality);
+		task_ctx ectx;
+		ectx.eles.input1d = elements;
+		ectx.eles.fixedbytelen = elebytelen;
+		ectx.eles.hasvarbytelen = false;
+
+		uint32_t* matches = (uint32_t*) malloc(sizeof(uint32_t) * neles);
+		uint32_t intersect_size = client_routine(neles, ectx, matches, crypt, sockets, ntasks, cardinality);
+
+		create_result_from_matches_fixed_bitlen(result, elebytelen, elements, matches, intersect_size);
+
+		free(matches);
+
+		return intersect_size;
+	}
+}
+
+
+uint32_t ttppsi(role_type role, uint32_t neles, uint32_t* elebytelens, uint8_t** elements,
+		uint8_t*** result, uint32_t** resbytelens, crypto* crypt, CSocket* sockets,
+		uint32_t ntasks, uint32_t nclients, bool cardinality) {
+
+	if(role == 0) { //Start the server
+		//TODO maybe rerun infinitely
+		server_routine(nclients, sockets, cardinality);
+		return 0;
+	} else { //Start clients
+		task_ctx ectx;
+		ectx.eles.input2d = elements;
+		ectx.eles.varbytelens = elebytelens;
+		ectx.eles.hasvarbytelen = true;
+
+		uint32_t* matches = (uint32_t*) malloc(sizeof(uint32_t) * neles);
+		uint32_t intersect_size = client_routine(neles, ectx, matches, crypt, sockets, ntasks, cardinality);
+
+		create_result_from_matches_var_bitlen(result, resbytelens, elebytelens, elements, matches, intersect_size);
+
+		free(matches);
+
+		return intersect_size;
 	}
 }

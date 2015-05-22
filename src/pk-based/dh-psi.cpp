@@ -71,7 +71,7 @@ uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx, c
 	ectx.eles.nelements = neles;
 	ectx.eles.outbytelen = hash_bytes;
 	ectx.eles.perm = perm;
-	ectx.hctx.symcrypt = crypt_env;
+	ectx.sctx.symcrypt = crypt_env;
 
 
 #ifdef DEBUG
@@ -86,14 +86,14 @@ uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx, c
 	ectx.eles.outbytelen = fe_bytes;
 	ectx.eles.output = encrypted_eles;
 	ectx.eles.hasvarbytelen = false;
-	ectx.ectx.field = field;
-	ectx.ectx.exponent = exponent;
-	ectx.ectx.sample = true;
+	ectx.actx.field = field;
+	ectx.actx.exponent = exponent;
+	ectx.actx.sample = true;
 
 #ifdef DEBUG
 	cout << "Hash and encrypting my elements" << endl;
 #endif
-	run_task(ntasks, ectx, encrypt);
+	run_task(ntasks, ectx, asym_encrypt);
 
 
 	peles = (uint8_t*) malloc(sizeof(uint8_t) * pneles * fe_bytes);
@@ -110,13 +110,13 @@ uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx, c
 	ectx.eles.fixedbytelen = fe_bytes;
 	ectx.eles.outbytelen = fe_bytes;
 	ectx.eles.hasvarbytelen = false;
-	ectx.ectx.exponent = exponent;
-	ectx.ectx.sample = false;
+	ectx.actx.exponent = exponent;
+	ectx.actx.sample = false;
 
 #ifdef DEBUG
 	cout << "Encrypting partners elements" << endl;
 #endif
-	run_task(ntasks, ectx, encrypt);
+	run_task(ntasks, ectx, asym_encrypt);
 
 	/* if only the cardinality should be computed, permute the elements randomly again. Otherwise don't permute */
 	if(cardinality) {
@@ -136,7 +136,7 @@ uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx, c
 	ectx.eles.outbytelen = hash_bytes;
 	ectx.eles.hasvarbytelen = false;
 	ectx.eles.perm = cardinality_perm;
-	ectx.hctx.symcrypt = crypt_env;
+	ectx.sctx.symcrypt = crypt_env;
 
 #ifdef DEBUG
 	cout << "Hashing elements" << endl;

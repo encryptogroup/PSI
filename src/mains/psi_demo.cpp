@@ -16,7 +16,7 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 	double epsilon=1.2;
 	uint64_t bytes_sent=0, bytes_received=0, mbfac;
 	uint32_t nelements=0, elebytelen=16, symsecbits=128, intersect_size = 0, i, j, ntasks=1,
-			pnelements, *elebytelens, *res_bytelens;
+			pnelements, *elebytelens, *res_bytelens, nclients = 2;
 	uint16_t port=7766;
 	uint8_t **elements, **intersection;
 	bool detailed_timings=false;
@@ -32,7 +32,12 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 	read_psi_demo_options(&argc, &argv, &role, &protocol, &filename, &address, &nelements, &detailed_timings);
 
 	if(role == SERVER) {
-		listen(address.c_str(), port, sockfd.data(), ntasks);
+		if(protocol == TTP) {
+			sockfd.resize(nclients);
+			listen(address.c_str(), port, sockfd.data(), nclients);
+		}
+		else
+			listen(address.c_str(), port, sockfd.data(), ntasks);
 	} else {
 		for(i = 0; i < ntasks; i++)
 			connect(address.c_str(), port, sockfd[i]);
@@ -41,13 +46,13 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 	gettimeofday(&t_start, NULL);
 
 	//read in files and get elements and byte-length from there
-
 	read_elements(&elements, &elebytelens, &nelements, filename);
 	if(detailed_timings) {
 		gettimeofday(&t_end, NULL);
 	}
 
-	pnelements = exchange_information(nelements, elebytelen, symsecbits, ntasks, protocol, sockfd[0]);
+	if(protocol != TTP)
+		pnelements = exchange_information(nelements, elebytelen, symsecbits, ntasks, protocol, sockfd[0]);
 	//cout << "Performing private set-intersection between " << nelements << " and " << pnelements << " element sets" << endl;
 
 	if(detailed_timings) {
@@ -62,7 +67,9 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 				&crypto, sockfd.data(), ntasks);
 		break;
 	case TTP:
-		///ttppsi(role, nelements, elebytelen, elements, &intersection, &crypto, sockfd.data(), nclients, cardinality); break;
+		intersect_size = ttppsi(role, nelements, elebytelens, elements, &intersection, &res_bytelens,
+				&crypto, sockfd.data(), ntasks);
+		break;
 	case DH_ECC:
 		intersect_size = dhpsi(role, nelements, pnelements, elebytelens, elements, &intersection, &res_bytelens, &crypto,
 				sockfd.data(), ntasks);
