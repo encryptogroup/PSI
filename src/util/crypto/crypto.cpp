@@ -110,11 +110,23 @@ void crypto::gen_rnd(uint8_t* resbuf, uint32_t nbytes) {
 	free(tmpbuf);*/
 }
 
-
-
-
 void crypto::gen_rnd_uniform(uint8_t* resbuf, uint64_t mod) {
-	//TODO: implement
+	//pad to multiple of 4 bytes for uint32_t length
+	uint32_t nrndbytes = pad_to_multiple(ceil_divide(secparam.symbits, 8) + ceil_log2(mod), sizeof(uint32_t));
+	uint64_t bitsint = (8*sizeof(uint32_t));
+	uint32_t rnditers = ceil_divide(nrndbytes * 8, bitsint);
+
+	uint32_t* rndbuf = (uint32_t*) malloc(nrndbytes);
+	gen_rnd((uint8_t*) rndbuf, nrndbytes);
+
+	uint64_t tmpval = 0, tmpmod = mod;
+
+	for(uint32_t i = 0; i < rnditers; i++) {
+		tmpval = (((uint64_t) (tmpval << bitsint)) | ((uint64_t)rndbuf[i]));
+		tmpval %= tmpmod;
+	}
+	*res = (uint32_t) tmpval;
+	free(rndbuf);
 }
 
 void crypto::encrypt(AES_KEY_CTX* enc_key, uint8_t* resbuf, uint8_t* inbuf, uint32_t ninbytes) {
