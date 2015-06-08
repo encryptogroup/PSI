@@ -2,7 +2,7 @@
 
 ### Faster Private Set Intersection Based on OT Extension
 
-By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1]. Please note that the code is currently being restructured and not all routines might work correctly.
+By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. 
 
 ### Features
 ---
