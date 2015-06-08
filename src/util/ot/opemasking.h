@@ -31,15 +31,16 @@ public:
 		assert(nbins > 0);
 		m_vStartingPosForBin[0] = 0;
 		m_nExpansionFactor = 1;
+		if(m_vNumEleInBin[0] > m_nCodeWordBits) {
+			m_nExpansionFactor = m_nCodeWordBits;
+		}
 		for(uint32_t i = 1; i < nbins; i++) {
 			m_vStartingPosForBin[i] = m_vStartingPosForBin[i-1] + m_vNumEleInBin[i-1];
 			if(m_vNumEleInBin[i] > m_nCodeWordBits) {
 				m_nExpansionFactor = m_nCodeWordBits;
 			}
 		}
-		if(m_vNumEleInBin[0] > m_nCodeWordBits) {
-			m_nExpansionFactor = m_nCodeWordBits;
-		}
+
 	};
 
 	//Constructor that is called by the client
@@ -78,11 +79,13 @@ public:
 	//Expansion routine for the server
 	void ServerExpand(CBitVector& matrix, uint8_t* uptr, uint32_t ot_begin_id, uint32_t processedOTs) {
 		uint64_t ot_id, bin_id, bit_id, u, binoffset;
+		uint32_t hashinbytes = m_nCodeWordBytes + sizeof(uint64_t);
 		uint8_t *Mptr = matrix.GetArr();
 		CBitVector mask(m_nCodeWordBits * m_nExpansionFactor);
 		uint8_t* hash_buf = (uint8_t*) malloc(m_nCodeWordBytes * m_nExpansionFactor);
-		uint8_t* mask_ptr = mask.GetArr();
+		uint8_t* mask_ptr;
 		uint8_t* hash_ptr;
+		uint8_t* tmpbuf = (uint8_t*) malloc(hashinbytes);
 
 		//m_vServerChoices.PrintHex();
 		for(ot_id = ot_begin_id; ot_id < ot_begin_id+processedOTs; ot_id++, Mptr+=m_nCodeWordBytes)
@@ -91,6 +94,8 @@ public:
 			bit_id = ot_id%m_nOTsPerElement;
 
 			binoffset = m_vStartingPosForBin[bin_id] * m_nOTsPerElement;
+
+			mask_ptr = mask.GetArr();
 
 			if(m_vNumEleInBin[bin_id] < m_nCodeWordBits) {
 				//cout << "Choice for ot_id = " << ot_id << ": ";
@@ -111,7 +116,10 @@ public:
 					((uint64_t*) mask_ptr)[0] ^= ot_id;
 					m_cCrypto->aes_compression_hash(m_kCRFKey, hash_buf, mask_ptr, m_nCodeWordBytes);
 	#else
-					m_cCrypto->hash_ctr(hash_buf, AES_BYTES, mask_ptr, m_nCodeWordBytes, ot_id);
+					memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
+					memcpy(tmpbuf+sizeof(uint64_t), mask_ptr, m_nCodeWordBytes);
+					m_cCrypto->hash(hash_buf, AES_BYTES, tmpbuf, hashinbytes);
+					//m_cCrypto->hash_ctr(hash_buf, AES_BYTES, mask_ptr, m_nCodeWordBytes, ot_id);
 	#endif
 				//	cout << "MaskBitLen: " << m_nMaskBitLen << ", results size = " << m_vResults[bin_id].GetSize() <<  endl;
 					//cout << "(" << (hex) << ((uint64_t*) hash_buf)[0] << ") " << (dec);
@@ -137,7 +145,16 @@ public:
 					((uint32_t*) mask_ptr)[0] ^= ot_id;
 					m_cCrypto->aes_compression_hash(m_kCRFKey, hash_ptr, mask_ptr, m_nCodeWordBytes);
 #else
-					m_cCrypto->hash_ctr(hash_buf, AES_BYTES, mask_ptr, m_nCodeWordBytes, ot_id);
+					memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
+					memcpy(tmpbuf+sizeof(uint64_t), mask_ptr, m_nCodeWordBytes);
+					m_cCrypto->hash(hash_ptr, AES_BYTES, tmpbuf, hashinbytes);
+					//m_cCrypto->hash_ctr(hash_ptr, AES_BYTES, mask_ptr, m_nCodeWordBytes, ot_id);
+#endif
+#ifdef DEBUG_HASH_OUTPUT
+					cout  << "hash output for ot_id = " << ot_id << " and element_id = " << u << ": ";
+					for(uint32_t j = 0; j < AES_BYTES; j++)
+						cout << (hex) << (unsigned int) hash_buf[j];
+					cout << (dec) << endl;
 #endif
 				}
 				uint64_t mask_id;
@@ -151,14 +168,17 @@ public:
 		}
 		mask.delCBitVector();
 		free(hash_buf);
+		free(tmpbuf);
 	}
 
 	//Expansion routine for the client
 	void ClientExpand(CBitVector& matrix, uint32_t ot_begin_id, uint32_t processedOTs) {
 		//uint8_t hash_buf[m_cCrypto->get_hash_bytes()];
 		uint64_t ot_id, bin_id;
+		uint32_t hashinbytes = m_nCodeWordBytes + sizeof(uint64_t);
 		uint8_t *Mptr = matrix.GetArr();
 		uint8_t* hash_buf = (uint8_t*) malloc(m_nCodeWordBytes);
+		uint8_t* tmpbuf = (uint8_t*) malloc(hashinbytes);
 
 		for(ot_id = ot_begin_id; ot_id < ot_begin_id+processedOTs; ot_id++, Mptr+=m_nCodeWordBytes)
 		{
@@ -176,7 +196,10 @@ public:
 				((uint64_t*) Mptr)[0] ^= ot_id;
 				m_cCrypto->aes_compression_hash(m_kCRFKey, hash_buf, Mptr, m_nCodeWordBytes);
 #else
-				m_cCrypto->hash_ctr(hash_buf, AES_BYTES, Mptr, m_nCodeWordBytes, ot_id);
+				memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
+				memcpy(tmpbuf+sizeof(uint64_t), Mptr, m_nCodeWordBytes);
+				m_cCrypto->hash(hash_buf, AES_BYTES, tmpbuf, hashinbytes);
+				//m_cCrypto->hash_ctr(hash_buf, AES_BYTES, Mptr, m_nCodeWordBytes, ot_id);
 #endif
 
 			//	cout << "Client expanding for bin_id : " << bin_id << endl;
@@ -187,12 +210,13 @@ public:
 #ifdef DEBUG_HASH_OUTPUT
 				cout << "hash output for ot_id = " << ot_id << ": ";
 				for(uint32_t j = 0; j < AES_BYTES; j++)
-					cout << (hex) << (unsigned int) hash_buf[j];
-				cout << (dec) << endl;
+					cout << (hex) << (uint32_t) hash_buf[j];
+				cout << (dec) << ", " << (ot_begin_id) << ", " << processedOTs << ", " << m_nCodeWordBytes << ", " << (uint64_t) Mptr << endl;
 #endif
 			}
 		}
 		free(hash_buf);
+		free(tmpbuf);
 	}
 
 	//the out vector contains the matrix with the data that needs to be hashed, uptr is a pointer to the choice-bits of the server in the base-OTs

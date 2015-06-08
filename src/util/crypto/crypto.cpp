@@ -110,7 +110,7 @@ void crypto::gen_rnd(uint8_t* resbuf, uint32_t nbytes) {
 	free(tmpbuf);*/
 }
 
-void crypto::gen_rnd_uniform(uint8_t* resbuf, uint64_t mod) {
+void crypto::gen_rnd_uniform(uint8_t* res, uint64_t mod) {
 	//pad to multiple of 4 bytes for uint32_t length
 	uint32_t nrndbytes = pad_to_multiple(ceil_divide(secparam.symbits, 8) + ceil_log2(mod), sizeof(uint32_t));
 	uint64_t bitsint = (8*sizeof(uint32_t));
@@ -215,7 +215,7 @@ void crypto::hash_ctr(uint8_t* resbuf, uint32_t noutbytes, uint8_t* inbuf, uint3
 	uint8_t* tmpbuf = (uint8_t*) malloc(ninbytes + sizeof(uint32_t));
 	memcpy(tmpbuf, &ctr, sizeof(uint32_t));
 	memcpy(tmpbuf + sizeof(uint32_t), inbuf, ninbytes);
-	hash_routine(resbuf, noutbytes, inbuf, ninbytes, sha_hash_buf);
+	hash_routine(resbuf, noutbytes, tmpbuf, ninbytes+sizeof(uint32_t), sha_hash_buf);
 	free(tmpbuf);
 }
 

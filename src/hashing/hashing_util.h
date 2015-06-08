@@ -13,13 +13,14 @@
 
 typedef uint16_t TABLEID_T;
 
-#define NUM_HASH_FUNCTIONS 2
+//#define TEST_UTILIZATION
+//#define NUM_HASH_FUNCTIONS 2
+#define NUM_HASH_FUNCTIONS 3
 #define MAX_TABLE_SIZE_BYTES sizeof(TABLEID_T)
 #define DUMMY_ENTRY_SERVER 0x00
 #define DUMMY_ENTRY_CLIENT 0xFF
 
 #define USE_LUBY_RACKOFF
-//#define TEST_UTILIZATION
 
 typedef struct hashing_state_ctx {
 	uint32_t** hf_values[NUM_HASH_FUNCTIONS];
@@ -103,9 +104,15 @@ static void init_hashing_state(hs_t* hs, uint32_t nelements, uint32_t inbitlen, 
 }
 
 static void free_hashing_state(hs_t* hs) {
-	uint32_t i;
-	for(i = 0; i < NUM_HASH_FUNCTIONS; i++)
+	uint32_t i, j;
+	for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
+		for(j = 0; j  < hs->nhfvals; j++) {
+			free(hs->hf_values[i][j]);
+		}
 		free(hs->hf_values[i]);
+	}
+	free(hs->address_used);
+	//free(hs->hf_values);
 }
 
 //reduce the bit-length of the elements if some bits are used to determine the bin and a permutation is used for hashing
@@ -151,17 +158,19 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 			//cout << "i = " << i << ", j = " << j << ", Hfmaskaddr = " << hfmaskaddr << endl;
 			//cout << "Hfvalue: " << hs->hf_values[i][j][hfmaskaddr] << endl;
 			address[i] = (L ^ *((hs->hf_values[i][j]+hfmaskaddr))) % hs->nbins;
+			//address[i] = (L ^ (i * R)) % hs->nbins;
 		}
 		//cout << address[i] << ", ";
 		//hs->address_used[address[i]]++;
 	}
 	//cout << endl;
+#ifndef TEST_UTILIZATION
 	*((uint32_t*) val)  = R;
 	//TODO copy remaining bits
 
 	if(hs->outbytelen >= sizeof(uint32_t))
 		memcpy(val + (sizeof(uint32_t) - hs->addrbytelen), element + sizeof(uint32_t), hs->outbytelen - sizeof(uint32_t));
-
+#endif
 	//cout << "Address for hfid = " << hfid << ": " << *address << ", L = " << L << ", R = " << R << endl;
 
 #else

@@ -20,6 +20,7 @@
 #include "../util/ot/opemasking.h"
 #include <algorithm>
 #include <glib.h>
+#include "../util/helpers.h"
 
 static bool DETAILED_TIMINGS=0;
 
@@ -27,6 +28,7 @@ static bool DETAILED_TIMINGS=0;
 //#define PRINT_BIN_CONTENT
 //#define PRINT_OPRG_MASKS
 //#define PRINT_RECEIVED_VALUES
+//#define PRINT_CRF_EVAL
 
 struct mask_rcv_ctx {
 	uint8_t* rcv_buf;
@@ -75,8 +77,6 @@ void *receive_masks(void *ctx_tmp);
 
 void InitOTReceiver(uint8_t* keyMtx, CSocket sock, crypto* crypt);
 void InitOTSender(uint8_t* keySeeds, CBitVector& choices, CSocket sock, crypto* crypt);
-
-void print_ot_psi_usage();
 
 GHashTable* otpsi_create_hash_table(uint32_t elebytelen, uint8_t* hashes, uint32_t neles, uint32_t
 		hashbytelen, uint32_t* perm);

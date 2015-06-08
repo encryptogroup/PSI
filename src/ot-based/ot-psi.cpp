@@ -7,80 +7,6 @@
 
 #include "ot-psi.h"
 
-/*int32_t main(int32_t argc, char** argv) {
-	uint32_t pid, nelements=10, elebytelen=4, symsecbits=80,
-			intersect_size, i, ntasks=1, runs=1, j;
-	int32_t nargs=8;
-	uint8_t *elements, *intersection;
-	const char* address;
-	uint16_t port;
-	timeval begin, end;
-	//CSocket* sockfd = (CSocket*) malloc(sizeof(CSocket) * ntasks);
-	vector<CSocket> sockfd(ntasks);
-	role_type role = (role_type) 0;
-	double epsilon=1.2;
-
-	if(argc < nargs) {
-		print_ot_psi_usage();
-	}
-
-	pid = atoi(argv[1]);
-	nelements = atoi(argv[2]);
-	elebytelen = atoi(argv[3]);
-	symsecbits = atoi(argv[4]);
-	address = argv[5];
-	port = (uint16_t) atoi(argv[6]);
-	epsilon = atof(argv[7]);
-	ntasks=atoi(argv[8]);
-
-	if(pid == 0) {
-		role = SERVER;
-		listen(address, port, sockfd.data(), ntasks);
-	} else {
-		role = CLIENT;
-		for(i = 0; i < ntasks; i++)
-			connect(address, port, sockfd[i]);
-	}
-
-	crypto crypto(symsecbits);//, const_ot_psi_seed);
-	elements = (uint8_t*) calloc(nelements * elebytelen, sizeof(uint8_t));
-
-#ifdef SET_INPUT_ELEMENTS
-	for(i = 0; i < nelements; i++) {
-		//for(j = 0; j < elebytelen; j++)
-			elements[i*elebytelen] = i;
-	}
-#endif
-#ifdef PRINT_INPUT_ELEMENTS
-	for(i = 0; i < nelements; i++) {
-		cout << "Element " << i << ": " << (hex);
-		for(j = 0; j < elebytelen; j++)
-			cout << (unsigned int) elements[i*elebytelen + j];
-		cout << (dec) << endl;
-	}
-#endif
-
-
-	gettimeofday(&begin, NULL);
-	for(i = 0; i < runs; i++) {
-		crypto.gen_rnd(elements, elebytelen * nelements);
-		intersect_size = otpsi(nelements, elebytelen*8, elements, &intersection, &crypto, sockfd.data(), role, ntasks, epsilon);
-	}
-	gettimeofday(&end, NULL);
-	cout << "Computing the intersection took " << getMillies(begin, end) << " ms" << endl;
-
-#ifdef PRINT_INTERSECTION
-	cout << "Intersecting elements" << endl;
-	for(i = 0; i < intersect_size; i++) {
-		for(j = 0; j < elebytelen; j++) {
-			cout << (hex) << (uint32_t) intersection[i * elebytelen + j] << (dec);
-		}
-		cout << endl;
-	}
-#endif
-	return 0;
-}*/
-
 
 uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t* elebytelens, uint8_t** elements,
 		uint8_t*** result, uint32_t** res_bytelen, crypto* crypt_env, CSocket* sock,  uint32_t ntasks, double epsilon,
@@ -126,15 +52,16 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t* elebyt
 		intersect_size = otpsi_client(eleptr, neles, nbins, pneles, internal_bitlen, maskbitlen, crypt_env,
 				sock, ntasks, &prf_state, &res_pos);
 
-		std::sort(res_pos, res_pos+intersect_size);
+		//std::sort(res_pos, res_pos+intersect_size);
 
-		*result = (uint8_t**) malloc(intersect_size * sizeof(uint8_t*));
-		*res_bytelen = (uint32_t*) malloc(intersect_size * sizeof(uint32_t));
-		for(i = 0; i < intersect_size; i++) {
+		//*result = (uint8_t**) malloc(intersect_size * sizeof(uint8_t*));
+		//*res_bytelen = (uint32_t*) malloc(intersect_size * sizeof(uint32_t));
+		/*for(i = 0; i < intersect_size; i++) {
 			(*res_bytelen)[i] = elebytelens[res_pos[i]];
 			(*result)[i] = (uint8_t*) malloc((*res_bytelen)[i]);
 			memcpy((*result)[i], elements[res_pos[i]], (*res_bytelen)[i]);
-		}
+		}*/
+		create_result_from_matches_var_bitlen(result, res_bytelen, elebytelens, elements, res_pos, intersect_size);
 	}
 
 	free(eleptr);
@@ -172,7 +99,6 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebitl
 		eleptr = elements;
 		internal_bitlen = elebitlen;
 	}
-
 
 	crypt_env->gen_common_seed(&prf_state, sock[0]);
 
@@ -223,8 +149,14 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_start, NULL);
 	}
+#ifndef TEST_UTILIZATION
 	hash_table = cuckoo_hashing(elements, neles, nbins, elebitlen, &outbitlen,
 			nelesinbin, perm, ntasks, prf_state);
+#else
+	cerr << "Test utilization is active, PSI protocol will not be working correctly!" << endl;
+	cuckoo_hashing(elements, neles, nbins, elebitlen, &outbitlen,
+				nelesinbin, perm, ntasks, prf_state);
+#endif
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
 		cout << "Time for Cuckoo hashing:\t" << fixed << std::setprecision(2) <<
@@ -238,6 +170,7 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 	gettimeofday(&t_start, NULL);
 #endif
 #ifdef PRINT_BIN_CONTENT
+	cout << "Client bin content: " << endl;
 	print_bin_content(hash_table, nbins, ceil_divide(outbitlen, 8), NULL, false);
 #endif
 
@@ -248,12 +181,22 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_start, NULL);
 	}
+
+	/*uint64_t tmpmask = 0;
+	for(uint32_t i = 0; i < neles-1; i++) {
+		memcpy((uint8_t*) &tmpmask, masks + i*maskbytelen, maskbytelen);
+		cout << "Mask " << i << " : " << (hex) <<  tmpmask << (dec) << endl; //"intersection found at position " << tmpval[0] << " for key " << tmpbuf[0] << endl;
+	}*/
 #ifdef TIMING
 	gettimeofday(&t_end, NULL);
 	cout << "Client: time for OPRG evaluation: " << getMillies(t_start, t_end) << " ms" << endl;
 	gettimeofday(&t_start, NULL);
 
 #endif
+/*#ifdef PRINT_BIN_CONTENT
+	cout << "Client masks: " << endl;
+	print_bin_content(masks, neles, maskbytelen, NULL, false);
+#endif*/
 	//receive server masks
 	server_masks = (uint8_t*) malloc(NUM_HASH_FUNCTIONS * pneles * maskbytelen);
 
@@ -289,7 +232,7 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 #endif
 #ifdef PRINT_RECEIVED_VALUES
 	cout << "Received server masks: " << endl;
-	print_bin_content(server_masks, NUM_HASH_FUNCTIONS*neles, maskbytelen, NULL, false);
+	print_bin_content(server_masks, NUM_HASH_FUNCTIONS*pneles, maskbytelen, NULL, false);
 #endif
 
 	//query hash table using multiple threads
@@ -315,7 +258,7 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 
 	//compute intersection
 	intersect_size = otpsi_find_intersection(result, masks, neles, server_masks,
-			neles * NUM_HASH_FUNCTIONS, maskbytelen, perm);
+			pneles * NUM_HASH_FUNCTIONS, maskbytelen, perm);
 
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
@@ -397,19 +340,6 @@ void otpsi_server(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_t pn
 	free(nelesinbin);
 }
 
-
-
-
-
-void print_ot_psi_usage() {
-	cout << "Usage: ./otpsi [0 (server)/1 (client)] [num_elements] [element_byte_length] "
-			<< "[sym_security_bits] [server_ip] [server_port] [CH_epsilon] [nthreads]" << endl;
-	cout << "Program exiting" << endl;
-	exit(0);
-}
-
-
-
 void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* nelesinbin, uint32_t elebitlen,
 		uint32_t maskbitlen, crypto* crypt,	CSocket* sock, uint32_t nthreads, uint8_t* res_buf) {
 	CBitVector choices;
@@ -477,10 +407,16 @@ void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* 
 #ifdef PRINT_OPRG_MASKS
 	for(i = 0, ctr=0; i < nbins; i++) {
 		if(nelesinbin[i] > 0) {
-			cout << "Result for element i = " << i << " and choice = " << (hex) <<
-					choices.Get<uint64_t>(i * OTsPerElement*8, OTsPerElement*8) << (dec) << ": ";
+			cout << "Result for element i = " << i << " and choice = ";// << (hex) <<
+			for(uint32_t j = 0; j < OTsPerElement; j++) {
+				//cout << (hex) << (uint32_t) hash_table[j + i * OTsPerElement] << (dec);
+				cout << setw(2) << setfill('0') << (hex) << (uint32_t) choices.GetByte(j + i * OTsPerElement) << (dec);
+			}
+			cout << ": ";
+
+			//choices.Get<uint64_t>(i * OTsPerElement*8, OTsPerElement*8) << (dec) << ": ";
 			for(uint32_t j  = 0; j < maskbytelen; j++) {
-				cout << (hex) << (uint32_t) res_buf[ctr * maskbytelen + j] << (dec);
+				cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[ctr * maskbytelen + j] << (dec);
 			}
 			cout << endl;
 			ctr++;
@@ -492,6 +428,19 @@ void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* 
 
 
 	evaluate_crf(res_buf, res_buf, neles, maskbytelen, crypt);
+
+#ifdef PRINT_CRF_EVAL
+	for(i = 0, ctr=0; i < nbins; i++) {
+		if(nelesinbin[i] > 0) {
+			cout << "CRF Result for element i = " << i << ": ";
+			for(uint32_t j  = 0; j < maskbytelen; j++) {
+				cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[ctr * maskbytelen + j] << (dec);
+			}
+			cout << endl;
+			ctr++;
+		}
+	}
+#endif
 
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
@@ -510,14 +459,14 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 	CBitVector input, results;
 	CBitVector baseOTchoices;
 	uint8_t* keySeeds;
-	uint32_t numOTs, OTsPerElement, i, maskbytelen;
+	uint32_t numOTs, OTsPerBin, i, maskbytelen;
 	OTExtension1ooNECCSender* sender;
 	timeval t_start, t_end;
 
 	maskbytelen = maskbitlen / 8;
 
-	OTsPerElement = ceil_divide(elebitlen, 8);
-	numOTs = nbins * OTsPerElement;
+	OTsPerBin = ceil_divide(elebitlen, 8);
+	numOTs = nbins * OTsPerBin;
 
 #ifndef BATCH
 	cout << "Server: bins = " << nbins << ", elebitlen = " << elebitlen << " and maskbitlen = " <<
@@ -570,9 +519,13 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 
 #ifdef PRINT_OPRG_MASKS
 	for(i = 0; i < totaleles; i++) {
-		cout << "Result for element i = " << i << ": ";
+		cout << "Result for element i = " << i << " ";
+		for(uint32_t j  = 0; j < OTsPerBin; j++) {
+			cout << setw(2) << setfill('0') << (hex) << (uint32_t) hash_table[i * OTsPerBin + j] << (dec);
+		}
+		cout << ": ";
 		for(uint32_t j  = 0; j < maskbytelen; j++) {
-			cout << (hex) << (uint32_t) res_buf[i * maskbytelen + j] << (dec);
+			cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[i * maskbytelen + j] << (dec);
 		}
 		cout << endl;
 	}
@@ -582,6 +535,16 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 
 	//evaluate correlation robust function on the elements
 	evaluate_crf(res_buf, res_buf, totaleles, maskbytelen, crypt);
+
+#ifdef PRINT_CRF_EVAL
+	for(i = 0; i < totaleles; i++) {
+		cout << "Result for element i = " << i << ": ";
+		for(uint32_t j  = 0; j < maskbytelen; j++) {
+			cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[i * maskbytelen + j] << (dec);
+		}
+		cout << endl;
+	}
+#endif
 
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
@@ -732,11 +695,16 @@ void *otpsi_query_hash_table(void* ctx_tmp) {//GHashTable *map, uint8_t* element
 //TODO if this works correctly, combine with other find intersection methods and outsource to hashing_util.h
 uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 		uint32_t my_neles, uint8_t* pa_hashes, uint32_t pa_neles, uint32_t hashbytelen, uint32_t* perm) {
+
 	uint32_t keys_stored;
 	uint32_t* matches = (uint32_t*) malloc(sizeof(uint32_t) * my_neles);
 	uint32_t* tmpval;
 	uint64_t tmpbuf;
 	uint32_t* tmpkeys;
+	uint32_t* invperm = (uint32_t*) malloc(sizeof(uint32_t) * my_neles);
+
+	for(uint32_t i = 0; i < my_neles; i++)
+		invperm[perm[i]] = i;
 
 	uint32_t size_intersect, i, intersect_ctr, tmp_hashbytelen;
 
@@ -782,6 +750,7 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 				}
 			} else {
 				matches[intersect_ctr] = tmpval[0];
+				//cout << "intersection found at position " << tmpval[0] << " for key " << (hex) << tmpbuf << (dec) << endl;
 				if(intersect_ctr<my_neles)
 					intersect_ctr++;
 				//cout << "Match found at " << tmpval[0] << " for i = " << i << endl;
@@ -807,6 +776,7 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 
 	free(matches);
 	free(map);
+	free(invperm);
 	return size_intersect;
 }
 
@@ -815,9 +785,7 @@ void evaluate_crf(uint8_t* result, uint8_t* masks, uint32_t nelements, uint32_t 
 	AES_KEY_CTX aes_key;
 	crypt->init_aes_key(&aes_key, 128, (uint8_t*) const_seed);
 	for(i = 0; i < nelements; i++) {
-		//cout << "Input: " << ((uint64_t*)masks)[0] << endl;
 		crypt->fixed_key_aes_hash(&aes_key, result+i*elebytelen, elebytelen, masks+i*elebytelen, elebytelen);
-		//cout << "Input: " << ((uint64_t*)masks)[0] << endl;
 	}
 }
 
@@ -830,7 +798,7 @@ void print_bin_content(uint8_t* hash_table, uint32_t nbins, uint32_t elebytelen,
 			cout << "(" << nelesinbin[i] << ") Bin " << i << ": ";
 			for(j = 0; j < nelesinbin[i]; j++) {
 				for(k = 0; k < elebytelen; k++, ctr++) {
-					cout << (hex) << (unsigned int) hash_table[ctr] << (dec);
+					cout << setw(2) << setfill('0') << (hex) << (unsigned int) hash_table[ctr] << (dec);
 				}
 				cout << " ";
 			}
@@ -840,7 +808,7 @@ void print_bin_content(uint8_t* hash_table, uint32_t nbins, uint32_t elebytelen,
 		for(i = 0, ctr = 0; i < nbins; i++) {
 			cout << "Bin " << i << ": ";
 			for(k = 0; k < elebytelen; k++, ctr++) {
-				cout << (hex) << (unsigned int) hash_table[ctr] << (dec);
+				cout << setw(2) << setfill('0') << (hex) << (unsigned int) hash_table[ctr] << (dec);
 			}
 			cout << endl;
 		}
