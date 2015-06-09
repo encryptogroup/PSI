@@ -36,7 +36,8 @@ int32_t main(int32_t argc, char** argv) {
 	for(uint32_t i = 0; i < nruns; i++) {
 		if(role == CLIENT) cout << "Running test on iteration " << i << std::flush;
 		nelements = rand() % (1<<12);
-		elebytelen = (rand() % 14) + 2;
+		elebytelen = (rand() % 12) + 4;
+
 		test_psi_prot(role, sockfd.data(), nelements, elebytelen, crypt);
 		if(role == CLIENT) cout << endl;
 	}
@@ -56,7 +57,7 @@ uint32_t test_psi_prot(role_type role, CSocket* sock, uint32_t nelements,
 
 	pnelements = set_up_parameters(role, nelements, &elebytelen, &elements, &pelements, sock[0], crypt);
 
-	if(role == CLIENT) cout << " (|A|: " << nelements << ", |B|: " << pnelements << ", b: " << elebytelen << "): " << std::flush;
+	if(role == CLIENT) cout << " for |A|=" << nelements << ", |B|=" << pnelements << ", b=" << elebytelen << ": " << std::flush;
 
 
 	p_inter_size = plaintext_intersect(nelements, pnelements, elebytelen, elements, pelements,
@@ -190,7 +191,7 @@ uint32_t plaintext_intersect(uint32_t myneles, uint32_t pneles, uint32_t bytelen
 uint32_t set_up_parameters(role_type role, uint32_t myneles, uint32_t* mybytelen,
 	uint8_t** elements, uint8_t** pelements, CSocket& sock, crypto* crypt) {
 
-	uint32_t pneles, nintersections;
+	uint32_t pneles, nintersections, offset;
 
 	//Exchange meta-information and equalize byte-length
 	sock.Send(&myneles, sizeof(uint32_t));
@@ -213,8 +214,10 @@ uint32_t set_up_parameters(role_type role, uint32_t myneles, uint32_t* mybytelen
 	} else { //have the client use some of the servers values s.t. the intersection is not disjoint
 		sock.Receive(*pelements, pneles * *mybytelen);
 		nintersections = rand() % min(myneles, pneles);
+		offset = myneles / nintersections;
+
 		for(uint32_t i = 0; i < nintersections; i++) {
-			memcpy(*elements + i * *mybytelen, *pelements + i * *mybytelen, *mybytelen);
+			memcpy(*elements + i * offset * *mybytelen, *pelements + i * *mybytelen, *mybytelen);
 		}
 		sock.Send(*elements, myneles * *mybytelen);
 	}
