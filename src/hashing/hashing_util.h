@@ -35,6 +35,7 @@ typedef struct hashing_state_ctx {
 	uint32_t addrbytelen;
 	uint32_t outbytelen;
 	uint32_t* address_used;
+	uint32_t mask;
 } hs_t;
 
 //TODO: generate these randomly for each execution and communicate them between the parties
@@ -102,6 +103,10 @@ static void init_hashing_state(hs_t* hs, uint32_t nelements, uint32_t inbitlen, 
 	}
 	//cout << "nhfvals = " << hs->nhfvals << endl;
 	hs->address_used = (uint32_t*) calloc(nbins, sizeof(uint32_t));
+	hs->mask = 0xFFFFFFFF;
+	if(hs->inbytelen < sizeof(uint32_t)) {
+		hs->mask >>= (sizeof(uint32_t) * 8 - hs->inbitlen - hs->addrbitlen);
+	}
 }
 
 static void free_hashing_state(hs_t* hs) {
@@ -133,6 +138,8 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 	L = *((uint32_t*) element) & SELECT_BITS[hs->addrbitlen];
 	//Store the remaining hs->outbitlen bits in R and pad correspondingly
 	R = (*((uint32_t*) element) & SELECT_BITS_INV[hs->addrbitlen]) >> (hs->addrbitlen);
+
+	R &= hs->mask;//mask = (1<<32-hs->addrbitlen)
 
 
 	//assert(R < (1<<hs->outbitlen));
@@ -170,7 +177,7 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 	//TODO copy remaining bits
 
 	//if(hs->outbytelen >= sizeof(uint32_t))
-	if(hs->outbitlen + hs->addrbitlen >= sizeof(uint32_t) * 8) {
+	if(hs->inbitlen > sizeof(uint32_t) * 8) {
 		//memcpy(val + (sizeof(uint32_t) - hs->addrbytelen), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - hs->addrbytelen));
 		memcpy(val + (sizeof(uint32_t) - (hs->addrbitlen >>3)), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - (hs->addrbitlen >>3)));
 
@@ -188,6 +195,7 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 		}
 		cout << (dec) << endl;*/
 	}
+
 
 #endif
 	//cout << "Address for hfid = " << hfid << ": " << *address << ", L = " << L << ", R = " << R << endl;

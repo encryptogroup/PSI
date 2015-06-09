@@ -41,7 +41,7 @@ int32_t main(int32_t argc, char** argv) {
 		if(role == CLIENT) cout << endl;
 	}
 
-	cout << "All tests successfully passed" << endl;
+	if(role == CLIENT) cout << "All tests successfully passed" << endl;
 }
 
 
@@ -56,7 +56,7 @@ uint32_t test_psi_prot(role_type role, CSocket* sock, uint32_t nelements,
 
 	pnelements = set_up_parameters(role, nelements, &elebytelen, &elements, &pelements, sock[0], crypt);
 
-
+	if(role == CLIENT) cout << " (|A|: " << nelements << ", |B|: " << pnelements << ", b: " << elebytelen << "): " << std::flush;
 
 
 	p_inter_size = plaintext_intersect(nelements, pnelements, elebytelen, elements, pelements,
@@ -102,13 +102,13 @@ uint32_t test_psi_prot(role_type role, CSocket* sock, uint32_t nelements,
 			cout << "\t" << ot_inter_size << " elements in OT intersection" << endl;
 
 			cout << "Plaintext intersection (" << p_inter_size << "): " << endl;
-			plot_set(p_intersection, p_inter_size, elebytelen);
+			//plot_set(p_intersection, p_inter_size, elebytelen);
 			cout << "Naive intersection (" << n_inter_size << "): " << endl;
-			plot_set(n_intersection, n_inter_size, elebytelen);
+			//plot_set(n_intersection, n_inter_size, elebytelen);
 			cout << "DH intersection (" << dh_inter_size << "): "  << endl;
-			plot_set(dh_intersection, dh_inter_size, elebytelen);
+			//plot_set(dh_intersection, dh_inter_size, elebytelen);
 			cout << "OT intersection: (" << ot_inter_size << "): " << endl;
-			plot_set(ot_intersection, ot_inter_size, elebytelen);
+			//plot_set(ot_intersection, ot_inter_size, elebytelen);
 		}
 
 		if(p_inter_size > 0)
@@ -122,7 +122,6 @@ uint32_t test_psi_prot(role_type role, CSocket* sock, uint32_t nelements,
 
 		assert(success);
 	}
-
 
 	free(elements);
 	free(pelements);
@@ -219,8 +218,6 @@ uint32_t set_up_parameters(role_type role, uint32_t myneles, uint32_t* mybytelen
 		}
 		sock.Send(*elements, myneles * *mybytelen);
 	}
-
-
 
 	//memset(*elements, 0x00, *mybytelen);
 	//memset(*pelements, 0x00, *mybytelen);
