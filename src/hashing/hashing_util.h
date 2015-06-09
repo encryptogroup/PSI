@@ -56,6 +56,7 @@ static const uint32_t SELECT_BITS_INV[33] = \
 									 0xFF000000, 0xFE000000, 0xFC000000, 0xF8000000, 0xF0000000, 0xE0000000, 0xC0000000, 0x80000000, \
 									 0x00000000 };
 
+static const uint8_t BYTE_SELECT_BITS_INV[8] = {0xFF, 0x7F, 0x3F, 0x1F, 0x0F, 0x07, 0x03, 0x01};
 
 //Init the values for the hash function
 static void init_hashing_state(hs_t* hs, uint32_t nelements, uint32_t inbitlen, uint32_t nbins,
@@ -168,8 +169,26 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 	*((uint32_t*) val)  = R;
 	//TODO copy remaining bits
 
-	if(hs->outbytelen >= sizeof(uint32_t))
-		memcpy(val + (sizeof(uint32_t) - hs->addrbytelen), element + sizeof(uint32_t), hs->outbytelen - sizeof(uint32_t));
+	//if(hs->outbytelen >= sizeof(uint32_t))
+	if(hs->outbitlen + hs->addrbitlen >= sizeof(uint32_t) * 8) {
+		//memcpy(val + (sizeof(uint32_t) - hs->addrbytelen), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - hs->addrbytelen));
+		memcpy(val + (sizeof(uint32_t) - (hs->addrbitlen >>3)), element + sizeof(uint32_t), hs->outbytelen - (sizeof(uint32_t) - (hs->addrbitlen >>3)));
+
+		//cout << "Element: "<< (hex) << (uint32_t) val[hs->outbytelen-1] << ", " << (uint32_t) (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03])
+		//		<< ", " << (uint32_t) (val[hs->outbytelen-1] & (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]) )<< (dec) << " :";
+
+		val[hs->outbytelen-1] &= (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]);
+
+		/*for(i = 0; i < hs->inbytelen; i++) {
+			cout << (hex) << (uint32_t) element[i];
+		}
+		cout << ", ";
+		for(i = 0; i < hs->outbytelen; i++) {
+			cout << (hex) << (uint32_t) val[i];
+		}
+		cout << (dec) << endl;*/
+	}
+
 #endif
 	//cout << "Address for hfid = " << hfid << ": " << *address << ", L = " << L << ", R = " << R << endl;
 

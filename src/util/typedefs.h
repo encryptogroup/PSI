@@ -9,7 +9,7 @@
 #define TYPEDEFS_H_
 
 //#define DEBUG
-//#define BATCH
+#define BATCH
 //#define TIMING
 
 #include <iostream>

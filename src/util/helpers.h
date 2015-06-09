@@ -91,6 +91,8 @@ static void create_result_from_matches_var_bitlen(uint8_t*** result, uint32_t** 
 	*result = (uint8_t**) malloc(sizeof(uint8_t*) * intersect_size);
 	*resbytelens = (uint32_t*) malloc(sizeof(uint32_t) * intersect_size);
 
+	std::sort(matches, matches+intersect_size);
+
 	for(i = 0; i < intersect_size; i++) {
 		(*resbytelens)[i] = inbytelens[matches[i]];
 		(*result)[i] = (uint8_t*) malloc((*resbytelens)[i]);
@@ -101,10 +103,12 @@ static void create_result_from_matches_var_bitlen(uint8_t*** result, uint32_t** 
 static void create_result_from_matches_fixed_bitlen(uint8_t** result, uint32_t inbytelen, uint8_t* inputs, uint32_t* matches,
 		uint32_t intersect_size) {
 	uint32_t i;
-	*result = (uint8_t*) malloc(sizeof(uint8_t) * intersect_size);
+	*result = (uint8_t*) malloc(inbytelen * intersect_size);
+
+	std::sort(matches, matches+intersect_size);
 
 	for(i = 0; i < intersect_size; i++) {
-		memcpy(result + i * inbytelen, inputs + matches[i] * inbytelen, inbytelen);
+		memcpy(*(result) + i * inbytelen, inputs + matches[i] * inbytelen, inbytelen);
 	}
 }
 
@@ -268,8 +272,8 @@ static uint32_t find_intersection(uint8_t* hashes, uint32_t neles, uint8_t* phas
 		uint32_t hashbytelen, uint32_t* perm, uint32_t* matches) {
 
 	uint32_t* invperm = (uint32_t*) malloc(sizeof(uint32_t) * neles);
-	uint64_t* tmpval;
-
+	uint64_t *tmpval, tmpkey = 0;
+	uint32_t mapbytelen = min((uint32_t) hashbytelen, (uint32_t) sizeof(uint64_t));
 	uint32_t size_intersect, i, intersect_ctr;
 
 	for(i = 0; i < neles; i++) {
@@ -278,13 +282,13 @@ static uint32_t find_intersection(uint8_t* hashes, uint32_t neles, uint8_t* phas
 
 	GHashTable *map= g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, NULL);
 	for(i = 0; i < neles; i++) {
-		g_hash_table_insert(map,(void*) ((uint64_t*) &(hashes[i*hashbytelen])), &(invperm[i]));
+		memcpy(&tmpkey, hashes + i*hashbytelen, mapbytelen);
+		g_hash_table_insert(map,(void*) &tmpkey, &(invperm[i]));
 	}
 
 	for(i = 0, intersect_ctr = 0; i < pneles; i++) {
-
-		if(g_hash_table_lookup_extended(map, (void*) ((uint64_t*) &(phashes[i*hashbytelen])),
-		    				NULL, (void**) &tmpval)) {
+		memcpy(&tmpkey, phashes+ i*hashbytelen, mapbytelen);
+		if(g_hash_table_lookup_extended(map, (void*) &tmpkey, NULL, (void**) &tmpval)) {
 			matches[intersect_ctr] = tmpval[0];
 			intersect_ctr++;
 			assert(intersect_ctr <= min(neles, pneles));

@@ -52,15 +52,6 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t* elebyt
 		intersect_size = otpsi_client(eleptr, neles, nbins, pneles, internal_bitlen, maskbitlen, crypt_env,
 				sock, ntasks, &prf_state, &res_pos);
 
-		//std::sort(res_pos, res_pos+intersect_size);
-
-		//*result = (uint8_t**) malloc(intersect_size * sizeof(uint8_t*));
-		//*res_bytelen = (uint32_t*) malloc(intersect_size * sizeof(uint32_t));
-		/*for(i = 0; i < intersect_size; i++) {
-			(*res_bytelen)[i] = elebytelens[res_pos[i]];
-			(*result)[i] = (uint8_t*) malloc((*res_bytelen)[i]);
-			memcpy((*result)[i], elements[res_pos[i]], (*res_bytelen)[i]);
-		}*/
 		create_result_from_matches_var_bitlen(result, res_bytelen, elebytelens, elements, res_pos, intersect_size);
 	}
 
@@ -71,12 +62,12 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t* elebyt
 
 
 
-uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebitlen, uint8_t* elements,
+uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebytelen, uint8_t* elements,
 		uint8_t** result, crypto* crypt_env, CSocket* sock,  uint32_t ntasks, double epsilon,
 		bool detailed_timings) {
 
 	prf_state_ctx prf_state;
-	uint32_t maskbytelen, nbins, intersect_size, internal_bitlen, maskbitlen, *res_pos, i, elebytelen;
+	uint32_t maskbytelen, nbins, intersect_size, internal_bitlen, maskbitlen, *res_pos, i, elebitlen;
 	uint8_t *eleptr;
 	timeval t_start, t_end;
 
@@ -84,16 +75,16 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebitl
 
 	maskbitlen = pad_to_multiple(crypt_env->get_seclvl().statbits + ceil_log2(neles) + ceil_log2(pneles), 8);
 	maskbytelen = ceil_divide(maskbitlen, 8);
-	elebytelen = ceil_divide(elebitlen, 8);
+	elebitlen = elebytelen * 8;
 
 	if(elebitlen > maskbitlen) {
 		//Hash elements into a smaller domain
 		eleptr = (uint8_t*) malloc(maskbytelen * neles);
-		domain_hashing(neles, elements, ceil_divide(elebitlen, 8), eleptr, maskbytelen, crypt_env);
+		domain_hashing(neles, elements, elebytelen, eleptr, maskbytelen, crypt_env);
 		internal_bitlen = maskbitlen;
 #ifndef BATCH
 		cout << "Hashing " << neles << " elements with " << elebitlen << " bit-length into " <<
-				maskbitlen << " representation " << endl;
+				maskbitlen << " bit representation " << endl;
 #endif
 	} else {
 		eleptr = elements;
@@ -110,10 +101,11 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebitl
 		nbins = ceil(epsilon * neles);
 		intersect_size = otpsi_client(eleptr, neles, nbins, pneles, internal_bitlen, maskbitlen, crypt_env,
 				sock, ntasks, &prf_state, &res_pos);
-		*result = (uint8_t*) malloc(intersect_size * elebytelen);
-		for(i = 0; i < intersect_size; i++) {
-			memcpy((*result) + i * elebytelen, elements + res_pos[i] * elebytelen, elebytelen);
-		}
+		//*result = (uint8_t*) malloc(intersect_size * elebytelen);
+		//for(i = 0; i < intersect_size; i++) {
+		//	memcpy((*result) + i * elebytelen, elements + res_pos[i] * elebytelen, elebytelen);
+		//}
+		create_result_from_matches_fixed_bitlen(result, elebytelen, elements, res_pos, intersect_size);
 	}
 
 	if(elebitlen > maskbitlen)
@@ -176,27 +168,23 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 
 	masks = (uint8_t*) malloc(neles * maskbytelen);
 	//Perform the OPRG execution
+	//cout << "otpsi client running ots" << endl;
 	oprg_client(hash_table, nbins, neles, nelesinbin, outbitlen, maskbitlen, crypt_env, sock, ntasks, masks);
 
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_start, NULL);
 	}
 
-	/*uint64_t tmpmask = 0;
-	for(uint32_t i = 0; i < neles-1; i++) {
-		memcpy((uint8_t*) &tmpmask, masks + i*maskbytelen, maskbytelen);
-		cout << "Mask " << i << " : " << (hex) <<  tmpmask << (dec) << endl; //"intersection found at position " << tmpval[0] << " for key " << tmpbuf[0] << endl;
-	}*/
 #ifdef TIMING
 	gettimeofday(&t_end, NULL);
 	cout << "Client: time for OPRG evaluation: " << getMillies(t_start, t_end) << " ms" << endl;
 	gettimeofday(&t_start, NULL);
 
 #endif
-/*#ifdef PRINT_BIN_CONTENT
+#ifdef PRINT_BIN_CONTENT
 	cout << "Client masks: " << endl;
 	print_bin_content(masks, neles, maskbytelen, NULL, false);
-#endif*/
+#endif
 	//receive server masks
 	server_masks = (uint8_t*) malloc(NUM_HASH_FUNCTIONS * pneles * maskbytelen);
 
@@ -265,6 +253,7 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 		cout << "Time for intersecting:\t\t" << fixed << std::setprecision(2) <<
 				getMillies(t_start, t_end) << " ms" << endl;
 	}
+
 	free(masks);
 	free(hash_table);
 	free(nelesinbin);
@@ -720,7 +709,7 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 	} else {
 		keys_stored = 1;
 		tmp_hashbytelen = hashbytelen;
-		tmpkeys = (uint32_t*) malloc(my_neles * keys_stored * sizeof(uint32_t));
+		tmpkeys = (uint32_t*) malloc(my_neles * sizeof(uint32_t));
 		memcpy(tmpkeys, perm, my_neles * sizeof(uint32_t));
 	}
 
@@ -760,7 +749,6 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 		}
 	}
 
-	//TODO: workaround since the masks that are inserted into the hash table are too small and collisions occur
 	if(intersect_ctr > my_neles) {
 		cout << "more intersections than elements: " << intersect_ctr << " vs " << my_neles << endl;
 		intersect_ctr = my_neles;
@@ -775,8 +763,8 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 	//cout << "I found " << size_intersect << " intersecting elements" << endl;
 
 	free(matches);
-	free(map);
 	free(invperm);
+	free(tmpkeys);
 	return size_intersect;
 }
 

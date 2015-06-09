@@ -165,7 +165,7 @@ inline void gen_cuckoo_entry(uint8_t* in, cuckoo_entry_ctx* out, hs_t* hs, uint3
 	out->eleid = ele_id;
 
 #ifndef TEST_UTILIZATION
-		out->val = (uint8_t*) malloc(hs->outbytelen);
+		out->val = (uint8_t*) calloc(hs->outbytelen, sizeof(uint8_t));
 #endif
 	hashElement(in, out->address, out->val, hs);
 }

@@ -48,6 +48,7 @@ uint8_t* simple_hashing(uint8_t* elements, uint32_t neles, uint32_t bitlen, uint
 //routine for generating the entries, is invoked by the threads
 void *gen_entries(void *ctx);
 void init_hash_table(sht_ctx* table, uint32_t nelements, hs_t* hs);
+void increase_max_bin_size(sht_ctx* table, uint32_t valbytelen);
 void free_hash_table(sht_ctx* table);
 inline void insert_element(sht_ctx* table, uint8_t* element, uint32_t* address, uint8_t* tmpbuf, hs_t* hs);
 

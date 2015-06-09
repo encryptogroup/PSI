@@ -103,7 +103,7 @@ void *gen_entries(void *ctx_tmp) {
 	uint32_t i, inbytelen, *address;
 
 	address = (uint32_t*) malloc(NUM_HASH_FUNCTIONS * sizeof(uint32_t));
-	tmpbuf = (uint8_t*) malloc(ceil_divide(ctx->hs->outbitlen, 8));	//for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
+	tmpbuf = (uint8_t*) calloc(ceil_divide(ctx->hs->outbitlen, 8), sizeof(uint8_t));	//for(i = 0; i < NUM_HASH_FUNCTIONS; i++) {
 	//	tmpbuf[i] = (uint8_t*) malloc(ceil_divide(ctx->hs->outbitlen, 8));
 	//}
 
@@ -132,7 +132,10 @@ inline void insert_element(sht_ctx* table, uint8_t* element, uint32_t* address, 
 		}
 		tmp_bin->nvals++;
 		//TODO: or simply allocate a bigger block of memory: table->maxbinsize * 2, left out for efficiency reasons
-		assert(tmp_bin->nvals < table->maxbinsize);
+		if(tmp_bin->nvals == table->maxbinsize) {
+			increase_max_bin_size(table, hs->outbytelen);
+		}
+		//assert(tmp_bin->nvals < table->maxbinsize);
 		/*cout << "Inserted into bin: " << address << ": " << (hex);
 		for(uint32_t j = 0; j < table->outbytelen; j++) {
 			cout << (unsigned int) tmpbuf[j];
@@ -141,7 +144,6 @@ inline void insert_element(sht_ctx* table, uint8_t* element, uint32_t* address, 
 		//pthread_mutex_unlock(locks + address[i]);
 	}
 }
-
 
 void init_hash_table(sht_ctx* table, uint32_t nelements, hs_t* hs) {
 	uint32_t i;
@@ -175,4 +177,16 @@ void free_hash_table(sht_ctx* table) {
 	free(table->bins);
 	//3. free the actual table
 	//free(table);
+}
+
+void increase_max_bin_size(sht_ctx* table, uint32_t valbytelen) {
+	uint32_t new_maxsize = table->maxbinsize * 2;
+	uint8_t* tmpvals;
+	for(uint32_t i = 0; i < table->nbins; i++) {
+		tmpvals = table->bins[i].values;
+		table->bins[i].values = (uint8_t*) malloc(new_maxsize * valbytelen);
+		memcpy(table->bins[i].values, tmpvals, table->bins[i].nvals * valbytelen);
+		free(tmpvals);
+	}
+	table->maxbinsize = new_maxsize;
 }
