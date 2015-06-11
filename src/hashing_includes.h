@@ -13,7 +13,7 @@
 #ifndef HASHING_INCLUDES_H_
 #define HASHING_INCLUDES_H_
 
-#include "../util/typedefs.h"
-#include "../util/crypto/crypto.h"
+#include "util/typedefs.h"
+#include "util/crypto/crypto.h"
 
 #endif /* HASHING_INCLUDES_H_ */

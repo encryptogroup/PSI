@@ -35,8 +35,8 @@ SOURCES_OT=${SRC}/util/ot/*.cpp
 OBJECTS_OT=${SRC}/util/ot/*.o
 SOURCES_CRYPTO=${SRC}/util/crypto/*.cpp
 OBJECTS_CRYPTO=${SRC}/util/crypto/*.o
-SOURCES_HASHING=${EXT}/hashing/*.cpp
-OBJECTS_HASHING=${EXT}/hashing/*.o
+SOURCES_HASHING=${SRC}/hashing/*.cpp
+OBJECTS_HASHING=${SRC}/hashing/*.o
 # naive hashing-based solution
 SOURCES_NAIVE=${SRC}/naive-hashing/*.cpp
 OBJECTS_NAIVE=${SRC}/naive-hashing/*.o
