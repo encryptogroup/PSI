@@ -10,6 +10,8 @@
 
 #include "hashing_util.h"
 
+
+//TEST CHANGE
 #define MAX_ITERATIONS 1024
 //#define DEBUG_CUCKOO
 #ifdef TEST_UTILIZATION
