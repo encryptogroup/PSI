@@ -222,9 +222,6 @@ uint32_t set_up_parameters(role_type role, uint32_t myneles, uint32_t* mybytelen
 		sock.Send(*elements, myneles * *mybytelen);
 	}
 
-	//memset(*elements, 0x00, *mybytelen);
-	//memset(*pelements, 0x00, *mybytelen);
-
 	return pneles;
 }
 

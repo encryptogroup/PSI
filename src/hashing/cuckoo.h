@@ -49,10 +49,6 @@ struct cuckoo_entry_gen_ctx {
 	//pointer to the cuckoo entries
 	cuckoo_entry_ctx* cuckoo_entries;
 	hs_t* hs;
-	//uint32_t inbitlen;
-	//uint32_t addr_bitlen;
-	//uint32_t outbitlen;
-	//uint32_t nbins;
 };
 
 

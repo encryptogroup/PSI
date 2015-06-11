@@ -8,14 +8,17 @@
 #ifndef HASHING_UTIL_H_
 #define HASHING_UTIL_H_
 
-#include "../util/typedefs.h"
-#include "../util/crypto/crypto.h"
+#include "hashing_includes.h"
+
 
 typedef uint16_t TABLEID_T;
 
 //#define TEST_UTILIZATION
-//#define NUM_HASH_FUNCTIONS 2
+#ifdef TEST_UTILIZATIN
+#define NUM_HASH_FUNCTIONS 2
+#else
 #define NUM_HASH_FUNCTIONS 3
+#endif
 #define MAX_TABLE_SIZE_BYTES sizeof(TABLEID_T)
 #define DUMMY_ENTRY_SERVER 0x00
 #define DUMMY_ENTRY_CLIENT 0xFF
