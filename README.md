@@ -91,7 +91,7 @@ The generator uses the first names, family names, and email providers listed in 
 
 [1] B. Pinkas, T. Schneider, M. Zohner. Faster Private Set Intersection Based on OT Extension. USENIX Security 2014: 797-812. Full version available at http://eprint.iacr.org/2014/447. 
 
-[1] B. Pinkas, T. Schneider, G. Segev, M. Zohner. Phasing: Private Set Intersection using Permutation-based Hashing. USENIX Security 2015. Full version available at http://eprint.iacr.org/2015/634. 
+[2] B. Pinkas, T. Schneider, G. Segev, M. Zohner. Phasing: Private Set Intersection using Permutation-based Hashing. USENIX Security 2015. Full version available at http://eprint.iacr.org/2015/634. 
 
 [3] S.  Kamara,  P.  Mohassel,  M.  Raykova,  and S. Sadeghian.  Scaling private set intersection to billion-element sets.  In
 Financial Cryptography and Data Security (FC’14) , LNCS. Springer, 2014.
