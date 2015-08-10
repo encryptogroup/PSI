@@ -2,16 +2,16 @@
 
 ### Faster Private Set Intersection Based on OT Extension
 
-By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. 
+By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1] and *Benny Pinkas, Thomas Schneider, Gil Segev and Michael Zohner* in USENIX Security Symposium 2015 [2]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. 
 
 ### Features
 ---
 
 * An implementation of different PSI protocols: 
   * the naive hashing solutions where elements are hashed and compared 
-  * the server-aided protocol of [2]
-  * the Diffie-Hellman-based PSI protocol of [3]
-  * the OT-based PSI protocol of [1]
+  * the server-aided protocol of [3]
+  * the Diffie-Hellman-based PSI protocol of [4]
+  * the OT-based PSI protocol of [2]
 
 This code is provided as a experimental implementation for testing purposes and should not be used in a productive environment. We cannot guarantee security and correctness.
 
@@ -91,8 +91,10 @@ The generator uses the first names, family names, and email providers listed in 
 
 [1] B. Pinkas, T. Schneider, M. Zohner. Faster Private Set Intersection Based on OT Extension. USENIX Security 2014: 797-812. Full version available at http://eprint.iacr.org/2014/447. 
 
-[2] S.  Kamara,  P.  Mohassel,  M.  Raykova,  and S. Sadeghian.  Scaling private set intersection to billion-element sets.  In
+[1] B. Pinkas, T. Schneider, G. Segev, M. Zohner. Phasing: Private Set Intersection using Permutation-based Hashing. USENIX Security 2015. Full version available at http://eprint.iacr.org/2015/634. 
+
+[3] S.  Kamara,  P.  Mohassel,  M.  Raykova,  and S. Sadeghian.  Scaling private set intersection to billion-element sets.  In
 Financial Cryptography and Data Security (FC’14) , LNCS. Springer, 2014.
 
-[3] C. Meadows.   A more efficient cryptographic matchmaking protocol for use in the absence of a continuously available third party.   In IEEE S&P’86, pages 134–137. IEEE, 1986.
+[4] C. Meadows.   A more efficient cryptographic matchmaking protocol for use in the absence of a continuously available third party.   In IEEE S&P’86, pages 134–137. IEEE, 1986.
 
