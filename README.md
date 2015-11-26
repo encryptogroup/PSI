@@ -39,6 +39,8 @@ This code is provided as a experimental implementation for testing purposes and 
 2. Enter the Framework directory: `cd PSI/`
 
 3. Call `make` in the root directory to compile all dependencies, tests, and examples and create the executables: **bench.exe** and **demo.exe**.
+g
+Please note that downloading this project as ZIP file will yield compilation errors, since the Miracl library is included as external project. To solve this, download the Miracl sources in commit version 'cff161b' (found [here](https://github.com/CertiVox/Miracl/tree/cff161bad6364548b361b63938a988db23f60c2a) and extract the contents of the main folder in 'src/externals/Miracl'. Then, continue with steps 2 and 3.
 
 ### Executing the Code
 
