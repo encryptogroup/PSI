@@ -23,6 +23,8 @@ typedef uint16_t TABLEID_T;
 #define DUMMY_ENTRY_SERVER 0x00
 #define DUMMY_ENTRY_CLIENT 0xFF
 
+//#define PRINT_DOMAIN_HASHING
+//#define PRINT_LUBY_RACKOFF_PERM
 #define USE_LUBY_RACKOFF
 
 typedef struct hashing_state_ctx {
@@ -70,7 +72,7 @@ static void init_hashing_state(hs_t* hs, uint32_t nelements, uint32_t inbitlen, 
 	hs->nbins = nbins;
 
 	hs->inbitlen = inbitlen;
-	hs->addrbitlen = min((uint32_t) ceil_log2(nbins), inbitlen);
+	hs->addrbitlen = min((uint32_t) floor_log2(nbins), inbitlen);
 
 #ifdef USE_LUBY_RACKOFF
 	hs->outbitlen = hs->inbitlen - hs->addrbitlen+1;
@@ -176,7 +178,7 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 	}
 	//cout << endl;
 #ifndef TEST_UTILIZATION
-	*((uint32_t*) val)  = R;
+	*((uint32_t*) val)  = (uint32_t) R;
 	//TODO copy remaining bits
 
 	//if(hs->outbytelen >= sizeof(uint32_t))
@@ -188,15 +190,16 @@ inline void hashElement(uint8_t* element, uint32_t* address, uint8_t* val, hs_t*
 		//		<< ", " << (uint32_t) (val[hs->outbytelen-1] & (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]) )<< (dec) << " :";
 
 		val[hs->outbytelen-1] &= (BYTE_SELECT_BITS_INV[hs->outbitlen & 0x03]);
-
-		/*for(i = 0; i < hs->inbytelen; i++) {
+#ifdef PRINT_LUBY_RACKOFF_PERM
+		for(i = 0; i < hs->inbytelen; i++) {
 			cout << (hex) << (uint32_t) element[i];
 		}
 		cout << ", ";
 		for(i = 0; i < hs->outbytelen; i++) {
 			cout << (hex) << (uint32_t) val[i];
 		}
-		cout << (dec) << endl;*/
+		cout << (dec) << endl;
+#endif
 	}
 
 
@@ -222,7 +225,7 @@ inline void domain_hashing(uint32_t nelements, uint8_t* elements, uint32_t eleby
 		uint32_t resultbytelen, crypto* crypt) {
 
 	uint8_t *eleptr, *resultptr, *hash_buf;
-	uint32_t i;
+	uint32_t i, j;
 
 	eleptr=elements;
 	resultptr = result;
@@ -233,6 +236,17 @@ inline void domain_hashing(uint32_t nelements, uint8_t* elements, uint32_t eleby
 	for(i = 0; i < nelements; i++, resultptr+=resultbytelen, eleptr+=elebytelen) {
 		memcpy(hash_buf, eleptr, elebytelen);
 		crypt->hash(resultptr, resultbytelen, hash_buf, elebytelen);
+#ifdef PRINT_DOMAIN_HASHING
+		cout  << "Hash for element " << i <<" ";
+		for(j = 0; j < elebytelen; j++) {
+			cout << (hex) << (uint32_t)  eleptr[j] << (dec);
+		}
+		cout << ": ";
+		for(j = 0; j < resultbytelen; j++) {
+			cout << (hex) << (uint32_t) resultptr[j] << (dec);
+		}
+		cout << endl;
+#endif
 	}
 	free(hash_buf);
 }
@@ -240,7 +254,7 @@ inline void domain_hashing(uint32_t nelements, uint8_t* elements, uint32_t eleby
 inline void domain_hashing(uint32_t nelements, uint8_t** elements, uint32_t* elebytelens, uint8_t* result,
 		uint32_t resultbytelen, crypto* crypt) {
 	uint8_t *resultptr;//, *hash_buf;
-	uint32_t i;
+	uint32_t i, j;
 
 	//eleptr=elements;
 	resultptr = result;
@@ -251,6 +265,17 @@ inline void domain_hashing(uint32_t nelements, uint8_t** elements, uint32_t* ele
 	for(i = 0; i < nelements; i++, resultptr+=resultbytelen) {
 		//memcpy(hash_buf, elements[i], elebytelens[i]);
 		crypt->hash(resultptr, resultbytelen, elements[i], elebytelens[i]);
+#ifdef PRINT_DOMAIN_HASHING
+		cout  << "Hash for element " << i <<" ";
+		for(j = 0; j < elebytelens[i]; j++) {
+			cout << elements[i][j];
+		}
+		cout << ": ";
+		for(j = 0; j < resultbytelen; j++) {
+			cout << (hex) << (uint32_t) resultptr[j] << (dec);
+		}
+		cout << endl;
+#endif
 	}
 	//free(hash_buf);
 }

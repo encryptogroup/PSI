@@ -157,6 +157,25 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 		gettimeofday(&t_start, NULL);
 	}
 
+#ifdef PRINT_CLIENT_MAPPING
+	uint32_t elebytelen = ceil_divide(elebitlen, 8);
+	uint32_t outbytelen = ceil_divide(outbitlen, 8);
+	for(uint32_t i = 0, ctr = 0; i < nbins; i++) {
+		if(nelesinbin[i] > 0) {
+			cout << "Element " << perm[ctr] << " " ;
+			for(uint32_t j = 0; j < elebytelen; j++) {
+				cout << (hex) << (uint32_t) elements[perm[ctr]*elebytelen + j] << (dec);
+			}
+			cout << " now maps to ";
+			for(uint32_t j = 0; j < outbytelen; j++) {
+				cout << (hex) << (uint32_t) hash_table[i*outbytelen + j] << (dec);
+			}
+			cout << endl;
+			ctr++;
+		}
+	}
+#endif
+
 #ifdef TIMING
 	gettimeofday(&t_end, NULL);
 	cout << "Client: time for cuckoo hashing: " << getMillies(t_start, t_end) << " ms" << endl;

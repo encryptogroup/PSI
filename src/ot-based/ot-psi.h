@@ -29,6 +29,7 @@ static bool DETAILED_TIMINGS=0;
 //#define PRINT_OPRG_MASKS
 //#define PRINT_RECEIVED_VALUES
 //#define PRINT_CRF_EVAL
+//#define PRINT_CLIENT_MAPPING
 //#define ENABLE_STASH //TODO: enabling stash introduces errors. fix!
 
 struct mask_rcv_ctx {
