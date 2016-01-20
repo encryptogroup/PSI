@@ -60,7 +60,7 @@ OBJECTS_MIRACL=${MIRACL_LIB_DIR}/*.o
 MIRACL_LIB=${EXT}/miracl_lib/miracl.a
 
 
-all: miracl core bench demo cuckoo
+all: miracl core bench demo
 	@echo "make all done."
 
 
