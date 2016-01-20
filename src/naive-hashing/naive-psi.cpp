@@ -51,7 +51,7 @@ uint32_t naivepsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx
 	CSocket* tmpsock = sock;
 
 	uint32_t* perm;
-	uint8_t *permeles, *hashes, *phashes;
+	uint8_t *hashes, *phashes;
 
 	maskbytelen = ceil_divide(crypt_env->get_seclvl().statbits + ceil_log2(neles) + ceil_log2(pneles), 8);
 
@@ -112,7 +112,7 @@ uint32_t naivepsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx
 #endif
 	free(perm);
 	free(hashes);
-	free(permeles);
+	//free(permeles);
 	free(phashes);
 
 	return intersect_size;
