@@ -91,7 +91,7 @@ cuckoo_hashing(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_t bitle
 			cout << (dec) << endl;*/
 #else
 			cerr << "Insertion not successful for element " <<i <<"!" << endl;
-			exit(0);
+			//exit(0);
 #endif
 		}
 	}

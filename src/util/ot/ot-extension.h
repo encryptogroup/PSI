@@ -32,7 +32,7 @@ typedef struct OTBlock_t {
 	OTBlock_t* next;
 } OTBlock;
 
-#define NUMOTBLOCKS 256
+#define NUMOTBLOCKS 1024
 #define REGISTER_BITS AES_BITS
 #define REGISTER_BYTES AES_BYTES
 

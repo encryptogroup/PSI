@@ -94,6 +94,7 @@ static void create_result_from_matches_var_bitlen(uint8_t*** result, uint32_t** 
 	std::sort(matches, matches+intersect_size);
 
 	for(i = 0; i < intersect_size; i++) {
+		cout << "matches[" << i << "]: " << matches[i]  << endl;
 		(*resbytelens)[i] = inbytelens[matches[i]];
 		(*result)[i] = (uint8_t*) malloc((*resbytelens)[i]);
 		memcpy((*result)[i], inputs[matches[i]], (*resbytelens)[i]);

@@ -98,6 +98,12 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 				cout << endl;
 			}
 		}
+
+		for(i = 0; i < intersect_size; i++) {
+			free(intersection[i]);
+		}
+		if(intersect_size > 0)
+			free(res_bytelens);
 	}
 
 	for(i = 0; i < sockfd.size(); i++) {
@@ -110,6 +116,7 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 		cout << "Data sent:\t" <<	((double)bytes_sent)/mbfac << " MB" << endl;
 		cout << "Data received:\t" << ((double)bytes_received)/mbfac << " MB" << endl;
 	}
+
 
 	for(i = 0; i < nelements; i++)
 		free(elements[i]);

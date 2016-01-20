@@ -29,6 +29,7 @@ static bool DETAILED_TIMINGS=0;
 //#define PRINT_OPRG_MASKS
 //#define PRINT_RECEIVED_VALUES
 //#define PRINT_CRF_EVAL
+//#define ENABLE_STASH //TODO: enabling stash introduces errors. fix!
 
 struct mask_rcv_ctx {
 	uint8_t* rcv_buf;
@@ -89,5 +90,7 @@ void print_bin_content(uint8_t* hash_table, uint32_t nbins, uint32_t elebytelen,
 
 void evaluate_crf(uint8_t* result, uint8_t* masks, uint32_t nelements, uint32_t elebytelen, crypto* crypt);
 
+
+uint32_t get_stash_size(uint32_t neles);
 
 #endif /* OT_PSI_H_ */

@@ -6,8 +6,11 @@ EXT=${SRC}/externals
 
 # compiler settings
 CC=g++
-COMPILER_OPTIONS=-O2
+#COMPILER_OPTIONS=-O2
+COMPILER_OPTIONS=-g3 -ggdb -O0 -Wall -Wextra
+
 DEBUG_OPTIONS=-g3
+
 BATCH=
 
 ARCHITECTURE = $(shell uname -m)
@@ -57,7 +60,7 @@ OBJECTS_MIRACL=${MIRACL_LIB_DIR}/*.o
 MIRACL_LIB=${EXT}/miracl_lib/miracl.a
 
 
-all: miracl core bench demo
+all: miracl core bench demo cuckoo
 	@echo "make all done."
 
 

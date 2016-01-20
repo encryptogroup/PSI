@@ -130,6 +130,7 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 	query_ctx* query_data = (query_ctx*) malloc(sizeof(query_ctx) * ntasks);
 	mask_rcv_ctx rcv_ctx;
 	timeval t_start, t_end;
+	uint32_t stashsize = get_stash_size(neles);
 
 	nelesinbin = (uint32_t*) calloc(nbins, sizeof(uint32_t));
 	maskbytelen = ceil_divide(maskbitlen, 8);
@@ -207,6 +208,21 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 		cerr << "Error in joining pthread at cuckoo hashing!" << endl;
 		exit(0);
 	}
+
+#ifdef ENABLE_STASH
+	//receive the masks for the stash
+	//cout << "allocating a stash of size " << pneles << " * " << maskbytelen << " * " << stashsize << endl;
+	uint8_t* stashmasks = (uint8_t*) malloc(pneles * maskbytelen * stashsize);
+	rcv_ctx.rcv_buf = server_masks;
+	rcv_ctx.nmasks = stashsize * pneles;
+	rcv_ctx.maskbytelen = maskbytelen;
+	rcv_ctx.sock = sock;
+	if(pthread_create(&rcv_masks_thread, NULL, receive_masks, (void*) (&rcv_ctx))) {
+		cerr << "Error in creating new pthread at cuckoo hashing!" << endl;
+		exit(0);
+	}
+#endif
+
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
 		cout << "Time for receiving masks:\t" << fixed << std::setprecision(2) <<
@@ -254,14 +270,28 @@ uint32_t otpsi_client(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_
 				getMillies(t_start, t_end) << " ms" << endl;
 	}
 
-	free(masks);
+	/*free(masks);
 	free(hash_table);
 	free(nelesinbin);
 	free(perm);
 	free(server_masks);
 	free(query_map_thread);
-	free(query_data);
-	//free(map);
+	free(query_data);*/
+
+
+	//cout << "joining" << endl;
+	//meanwhile generate the hash table
+	//GHashTable* map = otpsi_create_hash_table(ceil_divide(inbitlen,8), masks, neles, maskbytelen, perm);
+	//intersect_size = otpsi_find_intersection(eleptr, result, ceil_divide(inbitlen,8), masks, neles, server_masks,
+	//		neles * NUM_HASH_FUNCTIONS, maskbytelen, perm);
+#ifdef ENABLE_STASH
+	//wait for receiving thread
+	if(pthread_join(rcv_masks_thread, NULL)) {
+		cerr << "Error in joining pthread at cuckoo hashing!" << endl;
+		exit(0);
+	}
+	free(stashmasks);
+#endif
 
 	return intersect_size;
 }
@@ -274,6 +304,9 @@ void otpsi_server(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_t pn
 	uint32_t* nelesinbin;
 	uint32_t outbitlen, maskbytelen;
 	timeval t_start, t_end;
+#ifdef ENABLE_STASH
+	uint32_t stashsize = get_stash_size(neles);
+#endif
 
 	nelesinbin = (uint32_t*) malloc(sizeof(uint32_t) * nbins);
 	maskbytelen = ceil_divide(maskbitlen, 8);
@@ -314,6 +347,16 @@ void otpsi_server(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_t pn
 #endif
 	//send the masks to the receiver
 	send_masks(masks, neles * NUM_HASH_FUNCTIONS, maskbytelen, sock[0]);
+
+
+#ifdef ENABLE_STASH
+	//TODO: implement correctly
+	//send masks for all items on the stash
+	for(uint32_t i = 0; i < stashsize; i++) {
+		send_masks(masks, neles, maskbytelen, sock[0]);
+	}
+#endif
+
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
 		cout << "Time for sending masks:\t\t" << fixed << std::setprecision(2) <<
@@ -508,7 +551,7 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 
 #ifdef PRINT_OPRG_MASKS
 	for(i = 0; i < totaleles; i++) {
-		cout << "Result for element i = " << i << " ";
+		cout << "OPRG output for element i = " << i << " ";
 		for(uint32_t j  = 0; j < OTsPerBin; j++) {
 			cout << setw(2) << setfill('0') << (hex) << (uint32_t) hash_table[i * OTsPerBin + j] << (dec);
 		}
@@ -527,7 +570,7 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 
 #ifdef PRINT_CRF_EVAL
 	for(i = 0; i < totaleles; i++) {
-		cout << "Result for element i = " << i << ": ";
+		cout << "CRF output for element i = " << i << ": ";
 		for(uint32_t j  = 0; j < maskbytelen; j++) {
 			cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[i * maskbytelen + j] << (dec);
 		}
@@ -692,8 +735,10 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 	uint32_t* tmpkeys;
 	uint32_t* invperm = (uint32_t*) malloc(sizeof(uint32_t) * my_neles);
 
-	for(uint32_t i = 0; i < my_neles; i++)
+	for(uint32_t i = 0; i < my_neles; i++) {
+		assert(perm[i] < my_neles);
 		invperm[perm[i]] = i;
+	}
 
 	uint32_t size_intersect, i, intersect_ctr, tmp_hashbytelen;
 
@@ -703,7 +748,7 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 		tmp_hashbytelen = sizeof(uint64_t);
 		tmpkeys = (uint32_t*) calloc(my_neles * keys_stored, sizeof(uint32_t));
 		for(i = 0; i < my_neles; i++) {
-			memcpy(tmpkeys + 2*i,  my_hashes + i*hashbytelen + sizeof(uint64_t), hashbytelen-sizeof(uint64_t));
+			memcpy(tmpkeys + 2*i,  my_hashes + i*hashbytelen + tmp_hashbytelen, hashbytelen-sizeof(uint64_t));
 			memcpy(tmpkeys + 2*i + 1, perm + i, sizeof(uint32_t));
 		}
 	} else {
@@ -715,7 +760,7 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 
 	GHashTable *map= g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, NULL);
 	for(i = 0; i < my_neles; i++) {
-		//tmpbuf=0;
+		tmpbuf=0;
 		memcpy((uint8_t*) &tmpbuf, my_hashes + i*hashbytelen, tmp_hashbytelen);
 		//cout << "Insertion, " << i << " = " <<(hex) << tmpbuf << endl;
 		//for(uint32_t j = 0; j < tmp_hashbytelen; j++)
@@ -726,7 +771,7 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 	for(i = 0, intersect_ctr = 0; i < pa_neles; i++) {
 		//tmpbuf=0;
 		memcpy((uint8_t*) &tmpbuf, pa_hashes + i*hashbytelen, tmp_hashbytelen);
-		//cout << "Query, " << i << " = " <<(hex) << tmpbuf << endl;
+		//cout << "Query, " << i << " = " <<(hex) << tmpbuf << (dec) << endl;
 		if(g_hash_table_lookup_extended(map, (void*) &tmpbuf, NULL, (void**) &tmpval)) {
 			if(keys_stored > 1) {
 				tmpbuf = 0;
@@ -738,6 +783,7 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 				//cout << "Match found at " << tmpval[0] << endl;
 				}
 			} else {
+				//cout << "I have found a match for mask " << (hex) << tmpbuf << (dec) << endl;
 				matches[intersect_ctr] = tmpval[0];
 				//cout << "intersection found at position " << tmpval[0] << " for key " << (hex) << tmpbuf << (dec) << endl;
 				if(intersect_ctr<my_neles)
@@ -748,15 +794,14 @@ uint32_t otpsi_find_intersection(uint32_t** result, uint8_t* my_hashes,
 
 		}
 	}
-
-	if(intersect_ctr > my_neles) {
-		cout << "more intersections than elements: " << intersect_ctr << " vs " << my_neles << endl;
+	//cout << "Number of matches: " << intersect_ctr << ", my neles: " << my_neles << ", hashbytelen = " << hashbytelen << endl;
+	assert(intersect_ctr <= my_neles);
+	/*if(intersect_ctr > my_neles) {
+		cerr << "more intersections than elements: " << intersect_ctr << " vs " << my_neles << endl;
 		intersect_ctr = my_neles;
-	}
-	//assert(intersect_ctr <= my_neles);
+	}*/
 	size_intersect = intersect_ctr;
 
-	//result = (uint8_t**) malloc(sizeof(uint8_t*));
 	(*result) = (uint32_t*) malloc(sizeof(uint32_t) * size_intersect);
 	memcpy(*result, matches, sizeof(uint32_t) * size_intersect);
 
@@ -809,3 +854,15 @@ void *receive_masks(void *ctx_tmp) {
 	ctx->sock->Receive(ctx->rcv_buf, ctx->maskbytelen * ctx->nmasks);
 }
 
+uint32_t get_stash_size(uint32_t neles) {
+	if(neles >= (1<<24))
+		return 2;
+	if(neles >= (1<<20))
+		return 3;
+	if(neles >= (1<<16))
+		return 4;
+	if(neles >= (1<<12))
+		return 6;
+	if(neles >= (1<<8))
+		return 12;
+}

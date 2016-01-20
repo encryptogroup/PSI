@@ -84,7 +84,7 @@ int32_t benchroutine(int32_t argc, char** argv) {
 					ntasks, cardinality, ftype);
 			break;
 		case OT_PSI:
-			intersect_size = otpsi(role, nelements, pnelements, elebytelen*8, elements, &intersection, &crypto, sockfd.data(),
+			intersect_size = otpsi(role, nelements, pnelements, elebytelen, elements, &intersection, &crypto, sockfd.data(),
 					ntasks, epsilon, detailed_timings);
 			break;
 		default:break;
