@@ -11,6 +11,7 @@
 //#define DEBUG
 #define BATCH
 //#define TIMING
+//#define AES256_HASH
 
 #include <iostream>
 #include <string.h>
