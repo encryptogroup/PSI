@@ -87,6 +87,12 @@ public:
 		uint8_t* hash_ptr;
 		uint8_t* tmpbuf = (uint8_t*) malloc(hashinbytes);
 
+#ifdef AES256_HASH
+	AES_KEY tk_aeskey;
+	block inblock, outblock;
+	tk_aeskey.rounds = 14;
+#endif
+
 		//m_vServerChoices.PrintHex();
 		for(ot_id = ot_begin_id; ot_id < ot_begin_id+processedOTs; ot_id++, Mptr+=m_nCodeWordBytes)
 		{
@@ -112,9 +118,13 @@ public:
 							m_vServerChoices.Get<uint32_t>((binoffset + bit_id + u* m_nOTsPerElement) * 8, 8) << (dec) <<": ";
 					mask.PrintHex();
 	#endif
-	#ifdef FIXED_KEY_AES_HASH_OPRG
-					((uint64_t*) mask_ptr)[0] ^= ot_id;
-					m_cCrypto->aes_compression_hash(m_kCRFKey, hash_buf, mask_ptr, m_nCodeWordBytes);
+	#ifdef AES256_HASH
+					//((uint64_t*) mask_ptr)[0] ^= ot_id;
+					//m_cCrypto->aes_compression_hash(m_kCRFKey, hash_buf, mask_ptr, m_nCodeWordBytes);
+					AES_256_Key_Expansion(mask_ptr, &tk_aeskey);
+					inblock = _mm_loadu_si128((__m128i const*)(tmpbuf));
+					AES_encryptC(&inblock, &outblock, &tk_aeskey);
+					_mm_storeu_si128((__m128i *)(hash_buf), outblock);
 	#else
 					memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
 					memcpy(tmpbuf+sizeof(uint64_t), mask_ptr, m_nCodeWordBytes);
@@ -141,9 +151,13 @@ public:
 				}
 
 				for(u = 0, hash_ptr=hash_buf, mask_ptr=mask.GetArr(); u < m_nCodeWordBits; u++, mask_ptr+=m_nCodeWordBytes, hash_ptr+=AES_BYTES) {
-#ifdef FIXED_KEY_AES_HASH_OPRG
-					((uint32_t*) mask_ptr)[0] ^= ot_id;
-					m_cCrypto->aes_compression_hash(m_kCRFKey, hash_ptr, mask_ptr, m_nCodeWordBytes);
+#ifdef AES256_HASH
+					//((uint32_t*) mask_ptr)[0] ^= ot_id;
+					//m_cCrypto->aes_compression_hash(m_kCRFKey, hash_ptr, mask_ptr, m_nCodeWordBytes);
+					AES_256_Key_Expansion(mask_ptr, &tk_aeskey);
+					inblock = _mm_loadu_si128((__m128i const*)(tmpbuf));
+					AES_encryptC(&inblock, &outblock, &tk_aeskey);
+					_mm_storeu_si128((__m128i *)(hash_ptr), outblock);
 #else
 					memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
 					memcpy(tmpbuf+sizeof(uint64_t), mask_ptr, m_nCodeWordBytes);
@@ -180,6 +194,12 @@ public:
 		uint8_t* hash_buf = (uint8_t*) malloc(m_nCodeWordBytes);
 		uint8_t* tmpbuf = (uint8_t*) malloc(hashinbytes);
 
+#ifdef AES256_HASH
+	AES_KEY tk_aeskey;
+	block inblock, outblock;
+	tk_aeskey.rounds = 14;
+#endif
+
 		for(ot_id = ot_begin_id; ot_id < ot_begin_id+processedOTs; ot_id++, Mptr+=m_nCodeWordBytes)
 		{
 
@@ -192,9 +212,13 @@ public:
 				cout << endl;
 #endif
 
-#ifdef FIXED_KEY_AES_HASH_OPRG
-				((uint64_t*) Mptr)[0] ^= ot_id;
-				m_cCrypto->aes_compression_hash(m_kCRFKey, hash_buf, Mptr, m_nCodeWordBytes);
+#ifdef AES256_HASH
+				//((uint64_t*) Mptr)[0] ^= ot_id;
+				//m_cCrypto->aes_compression_hash(m_kCRFKey, hash_buf, Mptr, m_nCodeWordBytes);
+				AES_256_Key_Expansion(Mptr, &tk_aeskey);
+				inblock = _mm_loadu_si128((__m128i const*)(tmpbuf));
+				AES_encryptC(&inblock, &outblock, &tk_aeskey);
+				_mm_storeu_si128((__m128i *)(hash_buf), outblock);
 #else
 				memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
 				memcpy(tmpbuf+sizeof(uint64_t), Mptr, m_nCodeWordBytes);
