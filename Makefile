@@ -7,7 +7,7 @@ EXT=${SRC}/externals
 # compiler settings
 CC=g++
 #COMPILER_OPTIONS=-O2
-COMPILER_OPTIONS=-g3 -ggdb -O0 -Wall -Wextra
+COMPILER_OPTIONS=-g3 -ggdb -O2 -Wall -Wextra #-fPIC -mavx -maes -mpclmul -DRDTSC -DTEST=AES128
 
 DEBUG_OPTIONS=-g3
 
