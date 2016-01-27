@@ -258,18 +258,27 @@ void OTExtension1ooNECCReceiver::HashValues(CBitVector& T, CBitVector& seedbuf, 
 	//HASH_CTX sha;
 	uint8_t hash_buf[m_cCrypto->get_hash_bytes()];
 
+#ifdef AES256_HASH
+	AES_KEY tk_aeskey;
+	block inblock, outblock;
+	tk_aeskey.rounds = 14;
+#endif
+
 	for(uint32_t i = ctr; i < ctr+processedOTs; i++, Tptr+=m_nCodeWordBytes, bufptr+=AES_BYTES)
 	{
 #ifdef DEBUG_HASH_INPUT
 		cout << "hash input for i = " << i << " and choice = " << (uint32_t) m_nChoices.Get<uint32_t>(i) << ": ";
 		T.PrintHex((i-ctr) * m_nCodeWordBytes, (i-ctr+1) * m_nCodeWordBytes);
 #endif
+#ifdef AES256_HASH
+		AES_256_Key_Expansion(Tptr, &tk_aeskey);
+		inblock = _mm_loadu_si128((__m128i const*)(hash_buf));
+		AES_encryptC(&inblock, &outblock, &tk_aeskey);
+		_mm_storeu_si128((__m128i *)(bufptr), outblock);
+#else 
 		m_cCrypto->hash_ctr(bufptr, AES_BYTES, Tptr, m_nCodeWordBytes, i);
-		//MPC_HASH_INIT(&sha);
-		//MPC_HASH_UPDATE(&sha, (uint8_t*) &i, sizeof(i));
-		//MPC_HASH_UPDATE(&sha, Tptr, m_nCodeWordBytes);
-		//MPC_HASH_FINAL(&sha, hash_buf);
-		//memcpy(bufptr, hash_buf, AES_BYTES);
+#endif
+
 #ifdef DEBUG_HASH_OUTPUT
 		cout << "hash output for i = " << i << " and choice = " << (uint32_t) m_nChoices.Get<uint32_t>(i) << ": ";
 		for(uint32_t j = 0; j < AES_BYTES; j++)
@@ -543,7 +552,11 @@ void OTExtension1ooNECCSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CB
 
 	uint32_t ncrfevals = m_nSndVals;
 
-
+#ifdef AES256_HASH
+	AES_KEY tk_aeskey;
+	block inblock, outblock;
+	tk_aeskey.rounds = 14;
+#endif
 
 	for(uint32_t u = 0; u < m_nSndVals; u++)
 		sbp[u] = seedbuf[u].GetArr();
@@ -567,11 +580,15 @@ void OTExtension1ooNECCSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CB
 			cout << "hash input for i = " << i << " and u = " << u << ": ";
 			mask.PrintHex();
 #endif
-			//Q.XORBytes(mask.GetArr(), j * m_nCodeWordBytes, m_nCodeWordBytes);
+#ifdef AES256_HASH
+			AES_256_Key_Expansion(mask.GetArr(), &tk_aeskey);
+			inblock = _mm_loadu_si128((__m128i const*)(hash_buf));
+			AES_encryptC(&inblock, &outblock, &tk_aeskey);
+			_mm_storeu_si128((__m128i *)(sbp[u]), outblock);
+#else
 			m_cCrypto->hash_ctr(sbp[u], AES_BYTES, mask.GetArr(), m_nCodeWordBytes, i);
-			//sha = shatmp;
-			//MPC_HASH_UPDATE(&sha, mask.GetArr(), m_nCodeWordBytes);
-			//MPC_HASH_FINAL(&sha, hash_buf);
+#endif
+
 #ifdef DEBUG_HASH_OUTPUT
 			cout << "hash output for i = " << i << " and u = " << u << ": ";
 			for(uint32_t j = 0; j < AES_BYTES; j++)
