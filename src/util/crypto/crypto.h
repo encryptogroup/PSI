@@ -20,6 +20,7 @@
 #include "ecc-pk-crypto.h"
 #include "../codewords.h"
 #include "../socket.h"
+#include "TedKrovetzAesNiWrapperC.h"
 
 
 #define AES_BYTES 16
