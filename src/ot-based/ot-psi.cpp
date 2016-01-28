@@ -660,14 +660,25 @@ void InitOTReceiver(uint8_t* keyMtx, CSocket sock, crypto* crypt)
 	uint8_t* pBuf = (uint8_t*) malloc(crypt->get_hash_bytes() * numbaseOTs * 2);
 	bot->Sender(2, numbaseOTs, sock, pBuf);
 
+#ifdef AES256_HASH2
+	//Key expansion
+	uint8_t* pBufIdx = pBuf;
+	for(uint32_t i=0; i<numbaseOTs; i++ )
+	{
+		memcpy(keyMtx + i * crypt->get_aes_key_bytes(), pBufIdx, crypt->get_aes_key_bytes());
+		pBufIdx += crypt->get_hash_bytes();
+		memcpy(keyMtx + i * crypt->get_aes_key_bytes() + numbaseOTs * crypt->get_aes_key_bytes(), pBufIdx, crypt->get_aes_key_bytes());
+		pBufIdx += crypt->get_hash_bytes();
+	}
+#else
 	//Key expansion
 	uint8_t* pBufIdx = pBuf;
 	for(uint32_t i=0; i<numbaseOTs * 2; i++ )
 	{
 		memcpy(keyMtx + i * crypt->get_aes_key_bytes(), pBufIdx, crypt->get_aes_key_bytes());
 		pBufIdx += crypt->get_hash_bytes();
-		//cout << i/2 << ": " << (hex) << ((uint64_t*)keyMtx)[2*i] << ((uint64_t*)keyMtx)[2*i+1]<< (dec) << endl;
 	}
+#endif
 
 	free(pBuf);
 
