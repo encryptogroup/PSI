@@ -205,12 +205,21 @@ void OTExtension1ooNECCReceiver::GenerateChoiceCodes(CBitVector& choicecodes, CB
 
 void OTExtension1ooNECCReceiver::BuildMatrices(CBitVector& T, CBitVector& SndBuf, uint32_t numblocks, uint32_t ctr, uint8_t* ctr_buf)
 {
-	uint32_t* counter = (uint32_t*) ctr_buf;
-	uint32_t tempctr = (*counter);
+	uint64_t* counter = (uint64_t*) ctr_buf;
+	uint64_t tempctr = (*counter);
 
 	uint8_t* Tptr = T.GetArr();
 	uint8_t* sndbufptr = SndBuf.GetArr();
 
+
+#ifdef AES256_HASH
+	//first prg output written to tptr
+	intrin_sequential_gen_rnd8(ctr_buf, tempctr, Tptr, (int) 2*numblocks, (int) m_nCodeWordBits, m_vKeySeedMtx);
+
+	//second prg output written to snd buffer
+	intrin_sequential_gen_rnd8(ctr_buf, tempctr, sndbufptr, (int) 2*numblocks, (int) m_nCodeWordBits, m_vKeySeedMtx+m_nCodeWordBits);
+
+#else
 	//cout << "Numblocks = " << numblocks << endl;
 	for(uint32_t k = 0; k < m_nCodeWordBits; k++)
 	{
@@ -240,6 +249,7 @@ void OTExtension1ooNECCReceiver::BuildMatrices(CBitVector& T, CBitVector& SndBuf
 		cout << endl;
 #endif
 	}
+#endif
 	SndBuf.XORBytes(T.GetArr(), (uint32_t) 0, m_nCodeWordBytes*numblocks*m_nCodeWordBits);
 }
 

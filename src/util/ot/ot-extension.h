@@ -210,8 +210,13 @@ class OTExtensionReceiver {
 
 
 		m_nCounter = 0;
+#ifdef AES256_HASH
+		m_vKeySeedMtx = (ROUND_KEYS*) malloc(sizeof(ROUND_KEYS) * nbaseOTs * nSndVals);
+		intrin_sequential_ks4(m_vKeySeedMtx, keybytes, (int) nbaseOTs * nSndVals);
+#else
 		m_vKeySeedMtx = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * nbaseOTs * nSndVals);
 		InitAESKey(m_vKeySeedMtx, keybytes, nbaseOTs * nSndVals);
+#endif
 
 		m_nSeed = (uint8_t*) malloc(sizeof(AES_BYTES)); //
 		m_cCrypto->gen_rnd(m_nSeed, AES_BYTES);//seed;
@@ -252,7 +257,11 @@ class OTExtensionReceiver {
   	CBitVector m_vTempOTMasks;
   	uint8_t* m_nSeed;
   	MaskingFunction* m_fMaskFct;
+#ifdef AES256_HASH
+  	ROUND_KEYS* m_vKeySeedMtx;
+#else
   	AES_KEY_CTX* m_vKeySeedMtx;
+#endif
   	crypto* m_cCrypto;
   	CLock* m_lRcvLock;
 #ifdef FIXED_KEY_AES_HASHING

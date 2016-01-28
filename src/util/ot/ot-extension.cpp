@@ -196,6 +196,10 @@ void OTExtensionReceiver::BuildMatrices(CBitVector& T, CBitVector& SndBuf, uint3
 	uint8_t* Tptr = T.GetArr();
 	uint8_t* sndbufptr = SndBuf.GetArr();
 	uint32_t ctrbyte = ctr/8;
+#ifdef AES256_HASH
+	cerr << "Not supported with AES256 HASH enabled. Exiting." << endl;
+	exit(0);
+#else
 	for(uint32_t k = 0; k < m_nSymSecParam; k++)
 	{
 		(*counter) = tempctr;
@@ -211,6 +215,7 @@ void OTExtensionReceiver::BuildMatrices(CBitVector& T, CBitVector& SndBuf, uint3
 		}
 		SndBuf.XORBytesReverse(m_nChoices.GetArr()+ctrbyte, k*OTEXT_BLOCK_SIZE_BYTES * numblocks, OTEXT_BLOCK_SIZE_BYTES * numblocks);
 	}
+#endif
 	SndBuf.XORBytes(T.GetArr(), (uint32_t) 0, OTEXT_BLOCK_SIZE_BYTES*numblocks*m_nSymSecParam);
 }
 
@@ -575,7 +580,7 @@ void OTExtensionSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, uint32_t
 	uint32_t* counter = (uint32_t*) ctr_buf;
 	uint32_t tempctr = *counter;
 #ifdef AES256_HASH
-	cerr << "Not supported atm. Exiting." << endl;
+	cerr << "Not supported with AES256 HASH enabled. Exiting." << endl;
 	exit(0);
 #else
 	for (uint32_t k = 0; k < m_nSymSecParam; k++, rcvbufptr += (OTEXT_BLOCK_SIZE_BYTES * numblocks))
