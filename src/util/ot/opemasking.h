@@ -82,10 +82,10 @@ public:
 		uint32_t hashinbytes = m_nCodeWordBytes + sizeof(uint64_t);
 		uint8_t *Mptr = matrix.GetArr();
 		CBitVector mask(m_nCodeWordBits * m_nExpansionFactor);
-		uint8_t* hash_buf = (uint8_t*) malloc(m_nCodeWordBytes * m_nExpansionFactor);
+		uint8_t* hash_buf = (uint8_t*) mlloc(m_nCodeWordBytes * m_nExpansionFactor);
 		uint8_t* mask_ptr;
 		uint8_t* hash_ptr;
-		uint8_t* tmpbuf = (uint8_t*) malloc(hashinbytes);
+		uint8_t* tmpbuf = (uint8_t*) calloc(hashinbytes, sizeof(uint8_t));
 
 #ifdef AES256_HASH
 	AES_KEY tk_aeskey;
@@ -102,6 +102,10 @@ public:
 			binoffset = m_vStartingPosForBin[bin_id] * m_nOTsPerElement;
 
 			mask_ptr = mask.GetArr();
+
+#ifdef AES256_HASH
+			memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
+#endif
 
 			if(m_vNumEleInBin[bin_id] < m_nCodeWordBits) {
 				//cout << "Choice for ot_id = " << ot_id << ": ";
@@ -192,17 +196,21 @@ public:
 		uint32_t hashinbytes = m_nCodeWordBytes + sizeof(uint64_t);
 		uint8_t *Mptr = matrix.GetArr();
 		uint8_t* hash_buf = (uint8_t*) malloc(m_nCodeWordBytes);
-		uint8_t* tmpbuf = (uint8_t*) malloc(hashinbytes);
+		uint8_t* tmpbuf = (uint8_t*) calloc(hashinbytes, sizeof(uint8_t));
 
 #ifdef AES256_HASH
 	AES_KEY tk_aeskey;
 	block inblock, outblock;
 	tk_aeskey.rounds = 14;
+
 #endif
 
 		for(ot_id = ot_begin_id; ot_id < ot_begin_id+processedOTs; ot_id++, Mptr+=m_nCodeWordBytes)
 		{
 
+#ifdef AES256_HASH
+			memcpy(tmpbuf, (uint8_t*) &ot_id, sizeof(uint64_t));
+#endif
 			bin_id = ot_id/m_nOTsPerElement;
 			if(m_vNumEleInBin[bin_id] > 0) {
 #ifdef DEBUG_HASH_INPUT
