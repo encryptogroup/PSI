@@ -96,9 +96,13 @@ class OTExtensionSender {
 		m_cCrypto = crypt;
 		m_nSymSecParam = m_cCrypto->get_seclvl().symbits;
 		m_vValues = (CBitVector*) malloc(sizeof(CBitVector) * nSndVals);
+#ifdef AES256_HASH
+		m_vKeySeeds = (ROUND_KEYS*) malloc(sizeof(ROUND_KEYS) * nbaseOTs);
+		intrin_sequential_ks4(m_vKeySeeds, keybytes, (int) nbaseOTs);
+#else
 		m_vKeySeeds = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * nbaseOTs);
 		InitAESKey(m_vKeySeeds, keybytes, nbaseOTs);
-
+#endif
 		m_lSendLock = new CLock;
 
 
@@ -136,7 +140,11 @@ class OTExtensionSender {
   	CBitVector m_nU;
   	CBitVector* m_vValues;
   	MaskingFunction* m_fMaskFct;
+#ifdef AES256_HASH
+  	ROUND_KEYS* m_vKeySeeds;
+#else
   	AES_KEY_CTX* m_vKeySeeds;
+#endif
   	OTBlock* m_sBlockHead;
   	OTBlock* m_sBlockTail;
   	CLock* m_lSendLock;

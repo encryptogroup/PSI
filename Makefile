@@ -7,9 +7,9 @@ EXT=${SRC}/externals
 # compiler settings
 CC=g++
 #COMPILER_OPTIONS=-O2
-COMPILER_OPTIONS=-g3 -ggdb -O2 -Wall -Wextra #-fPIC -mavx -maes -mpclmul -DRDTSC -DTEST=AES128
+COMPILER_OPTIONS=-g3 -O2 #-fPIC -mavx -maes -mpclmul -DRDTSC -DTEST=AES128
 
-DEBUG_OPTIONS=-g3
+DEBUG_OPTIONS=-g3 -ggdb #-Wall -Wextra 
 
 BATCH=
 
@@ -67,7 +67,7 @@ all: miracl core bench demo
 core: ${OBJECTS_CORE}
 
 %.o:%.cpp %.h
-	${CC} $< ${COMPILER_OPTIONS} -c ${INCLUDE} ${LIBRARIES} ${CFLAGS} ${BATCH} -o $@
+	${CC} $< ${COMPILER_OPTIONS} ${DEBUG_OPTIONS} -c ${INCLUDE} ${LIBRARIES} ${CFLAGS} ${BATCH} -o $@
 
 bench:  
 	${CC} -o psi.exe ${SRC}/mains/bench_psi.cpp ${OBJECTS_DHPSI} ${OBJECTS_OTPSI} ${OBJECTS_NAIVE} ${OBJECTS_SERVERAIDED} ${OBJECTS_UTIL} ${OBJECTS_HASHING} ${OBJECTS_CRYPTO} ${OBJECTS_OT} ${OBJECTS_MIRACL} ${CFLAGS} ${DEBUG_OPTIONS} ${LIBRARIES} ${MIRACL_LIB} ${INCLUDE} ${COMPILER_OPTIONS}

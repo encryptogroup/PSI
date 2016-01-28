@@ -248,6 +248,7 @@ void OTExtensionReceiver::HashValues(CBitVector& T, CBitVector& seedbuf, uint32_
 		//MPC_HASH_UPDATE(&sha, Tptr, m_nSymSecParam>>3);
 		//MPC_HASH_FINAL(&sha, hash_buf);
 		//}
+		cout << "Hashing here" << endl;
 		memcpy(inbuf, &i, sizeof(uint32_t));
 		memcpy(inbuf+sizeof(uint32_t), Tptr, m_nSymSecParam>>3);
 		m_cCrypto->hash(hash_buf, aes_key_bytes, inbuf, hashinbytelen);
@@ -573,6 +574,10 @@ void OTExtensionSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, uint32_t
 	uint32_t dummy;
 	uint32_t* counter = (uint32_t*) ctr_buf;
 	uint32_t tempctr = *counter;
+#ifdef AES256_HASH
+	cerr << "Not supported atm. Exiting." << endl;
+	exit(0);
+#else
 	for (uint32_t k = 0; k < m_nSymSecParam; k++, rcvbufptr += (OTEXT_BLOCK_SIZE_BYTES * numblocks))
 	{
 		*counter = tempctr;
@@ -586,6 +591,7 @@ void OTExtensionSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, uint32_t
 			T.XORBytes(rcvbufptr, k*OTEXT_BLOCK_SIZE_BYTES * numblocks, OTEXT_BLOCK_SIZE_BYTES * numblocks);
 		}
 	}
+#endif
 }
 
 void OTExtensionSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVector* snd_buf, uint32_t ctr, uint32_t processedOTs)

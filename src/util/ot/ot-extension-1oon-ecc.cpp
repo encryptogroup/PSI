@@ -276,6 +276,7 @@ void OTExtension1ooNECCReceiver::HashValues(CBitVector& T, CBitVector& seedbuf, 
 		AES_encryptC(&inblock, &outblock, &tk_aeskey);
 		_mm_storeu_si128((__m128i *)(bufptr), outblock);
 #else 
+		cout << "hashing" << endl;
 		m_cCrypto->hash_ctr(bufptr, AES_BYTES, Tptr, m_nCodeWordBytes, i);
 #endif
 
@@ -517,8 +518,17 @@ void OTExtension1ooNECCSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, u
 {
 	uint8_t* rcvbufptr = RcvBuf.GetArr();
 	uint8_t* Tptr = T.GetArr();
-	uint32_t* counter = (uint32_t*) ctr_buf;
-	uint32_t tempctr = *counter;
+	uint64_t* counter = (uint64_t*) ctr_buf;
+	uint64_t tempctr = *counter;
+#ifdef AES256_HASH
+	intrin_sequential_gen_rnd8(ctr_buf, tempctr, Tptr, (int) 2*numblocks, (int) m_nCodeWordBits, m_vKeySeeds);
+
+	for (uint32_t k = 0; k < m_nCodeWordBits; k++, rcvbufptr += (m_nCodeWordBytes * numblocks))	{
+		if(m_nU.GetBit(k)){
+			T.XORBytes(rcvbufptr, k*m_nCodeWordBytes * numblocks, m_nCodeWordBytes * numblocks);
+		}
+	}
+#else
 	for (uint32_t k = 0; k < m_nCodeWordBits; k++, rcvbufptr += (m_nCodeWordBytes * numblocks))
 	{
 		*counter = tempctr;
@@ -531,6 +541,7 @@ void OTExtension1ooNECCSender::BuildQMatrix(CBitVector& T, CBitVector& RcvBuf, u
 			T.XORBytes(rcvbufptr, k*m_nCodeWordBytes * numblocks, m_nCodeWordBytes * numblocks);
 		}
 	}
+#endif
 }
 
 void OTExtension1ooNECCSender::MaskInputs(CBitVector& Q, CBitVector* seedbuf, CBitVector* snd_buf, uint32_t ctr, uint32_t processedOTs)
