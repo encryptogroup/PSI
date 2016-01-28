@@ -211,11 +211,11 @@ class OTExtensionReceiver {
 
 		m_nCounter = 0;
 #ifdef AES256_HASH
-		m_vKeySeedMtx = (ROUND_KEYS*) malloc(sizeof(ROUND_KEYS) * nbaseOTs * nSndVals);
-		intrin_sequential_ks4(m_vKeySeedMtx, keybytes, (int) nbaseOTs * nSndVals);
+		m_vKeySeedMtx = (ROUND_KEYS*) malloc(sizeof(ROUND_KEYS) * nbaseOTs * 2);
+		intrin_sequential_ks4(m_vKeySeedMtx, keybytes, (int) nbaseOTs * 2);
 #else
-		m_vKeySeedMtx = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * nbaseOTs * nSndVals);
-		InitAESKey(m_vKeySeedMtx, keybytes, nbaseOTs * nSndVals);
+		m_vKeySeedMtx = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * nbaseOTs * 2);
+		InitAESKey(m_vKeySeedMtx, keybytes, nbaseOTs * 2);
 #endif
 
 		m_nSeed = (uint8_t*) malloc(sizeof(AES_BYTES)); //

@@ -107,11 +107,11 @@ void CBitVector::ResizeinBytes(int newSizeBytes)
 	int tSize = m_nByteSize;
 
 	m_nByteSize = newSizeBytes;
-	m_pBits = new uint8_t[m_nByteSize];
+	m_pBits = (uint8_t*) calloc(m_nByteSize, sizeof(uint8_t));
 
 	memcpy(m_pBits, tBits, tSize);
 
-	delete(tBits);
+	free(tBits);
 }
 
 void CBitVector::Copy(uint8_t* p, int pos, int len)
