@@ -82,7 +82,7 @@ public:
 		uint32_t hashinbytes = m_nCodeWordBytes + sizeof(uint64_t);
 		uint8_t *Mptr = matrix.GetArr();
 		CBitVector mask(m_nCodeWordBits * m_nExpansionFactor);
-		uint8_t* hash_buf = (uint8_t*) mlloc(m_nCodeWordBytes * m_nExpansionFactor);
+		uint8_t* hash_buf = (uint8_t*) malloc(m_nCodeWordBytes * m_nExpansionFactor);
 		uint8_t* mask_ptr;
 		uint8_t* hash_ptr;
 		uint8_t* tmpbuf = (uint8_t*) calloc(hashinbytes, sizeof(uint8_t));
