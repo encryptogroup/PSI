@@ -21,6 +21,7 @@
 #include "../codewords.h"
 #include "../socket.h"
 #include "TedKrovetzAesNiWrapperC.h"
+#include "intrin_sequential_enc8.h"
 
 
 #define AES_BYTES 16
