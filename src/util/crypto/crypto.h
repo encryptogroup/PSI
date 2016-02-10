@@ -27,6 +27,10 @@
 #define AES_BYTES 16
 #define AES_BITS AES_BYTES*8
 
+#define SHA1_OUT_BYTES 20
+#define SHA256_OUT_BYTES 32
+#define SHA512_OUT_BYTES 64
+
 const uint8_t ZERO_IV[AES_BYTES]={0};
 
 const uint8_t const_seed[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
@@ -133,7 +137,7 @@ static void InitAndReadCodeWord(REGISTER_SIZE*** codewords) {
 	uint32_t ncodewords = m_nCodeWordBits;
 	uint32_t ncwintlen = 8;
 	*codewords = (REGISTER_SIZE**) malloc(sizeof(REGISTER_SIZE*) * ncodewords);
-	for(uint32_t i = 0; i < m_nCodewords; i++) {
+	for(uint32_t i = 0; i < ncodewords; i++) {
 		(*codewords)[i] = (REGISTER_SIZE*) malloc(sizeof(REGISTER_SIZE) * ((ncwintlen * sizeof(uint32_t)) / sizeof(REGISTER_SIZE)));
 	}
 	readCodeWords(*codewords);

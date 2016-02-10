@@ -186,7 +186,7 @@ void prime_field::init(seclvl sp, uint8_t* seed) {
 	mpz_init(rnd_seed);
 	secparam = sp;
 
-	mpz_import(rnd_seed, secparam.symbits, 1, sizeof((seed)[0]), 0, 0, seed);
+	mpz_import(rnd_seed, ceil_divide(secparam.symbits, 8), 1, sizeof((seed)[0]), 0, 0, seed);
 
 	if (secparam.ifcbits == ST.ifcbits) {
 		mpz_set_str(p, ifcp1024, 16);
@@ -204,7 +204,7 @@ void prime_field::init(seclvl sp, uint8_t* seed) {
 	{
 		mpz_set_str(p, ifcp3072, 10);
 		mpz_set_str(g, ifcg3072, 10);
-		mpz_set_str(q, ifcq1024, 10);
+		mpz_set_str(q, ifcq3072, 10);
 	}
 
 	//TODO it would be better not to GMP's internal random generator, since it is not secure

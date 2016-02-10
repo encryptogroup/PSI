@@ -45,20 +45,24 @@ void crypto::init(uint32_t symsecbits, uint8_t* seed) {
 	aes_hash_buf_y1 = (uint8_t*) malloc(AES_BYTES);
 	aes_hash_buf_y2 = (uint8_t*) malloc(AES_BYTES);
 
-	sha_hash_buf = (uint8_t*) malloc((secparam.symbits >> 3 ) * 2);
-
-	if(secparam.symbits == ST.symbits) {
+	if (secparam.symbits == ST.symbits) {
 		hash_routine = &sha1_hash;
-	} else if(secparam.symbits == MT.symbits) {
+		sha_hash_buf = (uint8_t*) malloc(SHA1_OUT_BYTES);
+	} else if (secparam.symbits == MT.symbits) {
 		hash_routine = &sha256_hash;
-	} else if(secparam.symbits == LT.symbits) {
+		sha_hash_buf = (uint8_t*) malloc(SHA256_OUT_BYTES);
+	} else if (secparam.symbits == LT.symbits) {
 		hash_routine = &sha256_hash;
-	} else if(secparam.symbits == XLT.symbits) {
+		sha_hash_buf = (uint8_t*) malloc(SHA256_OUT_BYTES);
+	} else if (secparam.symbits == XLT.symbits) {
 		hash_routine = &sha512_hash;
-	} else if(secparam.symbits == XXLT.symbits) {
+		sha_hash_buf = (uint8_t*) malloc(SHA512_OUT_BYTES);
+	} else if (secparam.symbits == XXLT.symbits) {
 		hash_routine = &sha512_hash;
+		sha_hash_buf = (uint8_t*) malloc(SHA512_OUT_BYTES);
 	} else {
 		hash_routine = &sha256_hash;
+		sha_hash_buf = (uint8_t*) malloc(SHA256_OUT_BYTES);
 	}
 }
 
