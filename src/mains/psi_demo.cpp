@@ -169,9 +169,9 @@ int32_t read_psi_demo_options(int32_t* argcp, char*** argvp, role_type* role, ps
 	parsing_ctx options[] = {{(void*) &int_role, T_NUM, 'r', "Role: 0/1", true, false},
 			{(void*) &int_protocol, T_NUM, 'p', "PSI protocol (0: Naive, 1: TTP, 2: DH, 3: OT)", true, false},
 			{(void*) filename, T_STR, 'f', "Input file", true, false},
-			{(void*) address, T_STR, 'a', "IP-address", false, false},
-			{(void*) nelements, T_NUM, 'n', "Num elements", false, false},
-			{(void*) detailed_timings, T_FLAG, 't', "Flag: Detailed timings", false, false}
+			{(void*) address, T_STR, 'a', "Server IP-address (needed by both, client and server)", false, false},
+			{(void*) nelements, T_NUM, 'n', "Number of elements", false, false},
+			{(void*) detailed_timings, T_FLAG, 't', "Flag: Enable detailed timings", false, false}
 	};
 
 	if(!parse_options(argcp, argvp, options, sizeof(options)/sizeof(parsing_ctx))) {

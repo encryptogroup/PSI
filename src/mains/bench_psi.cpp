@@ -134,17 +134,17 @@ int32_t read_bench_options(int32_t* argcp, char*** argvp, role_type* role, uint3
 
 	parsing_ctx options[] = {{(void*) &int_role, T_NUM, 'r', "Role: 0/1", true, false},
 			{(void*) &int_protocol, T_NUM, 'p', "PSI protocol (0: Naive, 1: TTP, 2: DH, 3: OT)", true, false},
-			{(void*) nelements, T_NUM, 'n', "Num elements", true, false},
-			{(void*) bytelen, T_NUM, 'b', "Byte length", true, false},
-			{(void*) secparam, T_NUM, 's', "Symmetric Security Bits", false, false},
-			{(void*) address, T_STR, 'a', "IP-address", false, false},
+			{(void*) nelements, T_NUM, 'n', "Number of elements", true, false},
+			{(void*) bytelen, T_NUM, 'b', "Byte length of elements", true, false},
+			{(void*) secparam, T_NUM, 's', "Symmetric Security Bits (default: 128)", false, false},
+			{(void*) address, T_STR, 'a', "Server IP-address (needed by both, client and server)", false, false},
 			{(void*) &int_port, T_NUM, 'o', "Port", false, false},
 			{(void*) ntasks, T_NUM, 't', "Number of threads", false, false},
 			{(void*) nclients, T_NUM, 'c', "Number of clients for TTP based protocol", false, false},
 			{(void*) epsilon, T_DOUBLE, 'e', "Epsilon in Cuckoo hashing", false, false},
 			{(void*) cardinality, T_FLAG, 'y', "Compute cardinality (only for DH and TTP PSI)", false, false},
 			{(void*) &useffc, T_FLAG, 'f', "Use finite-field cryptography", false, false},
-			{(void*) detailed_timings, T_FLAG, 'd', "Enable Detailed Timings", false, false}
+			{(void*) detailed_timings, T_FLAG, 'd', "Flag: Enable Detailed Timings", false, false}
 	};
 
 	if(!parse_options(argcp, argvp, options, sizeof(options)/sizeof(parsing_ctx))) {
