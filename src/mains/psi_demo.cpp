@@ -59,7 +59,7 @@ int32_t psi_demonstrator(int32_t argc, char** argv) {
 		cout << "Time for reading elements:\t" << fixed << std::setprecision(2) << getMillies(t_start, t_end)/1000 << " s" << endl;
 	}
 
-	crypto crypto(symsecbits);//, (uint8_t*) const_seed);
+	crypto crypto(symsecbits, (uint8_t*) const_seed);
 
 	switch(protocol) {
 	case NAIVE:
