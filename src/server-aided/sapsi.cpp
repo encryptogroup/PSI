@@ -93,9 +93,6 @@ uint32_t compute_intersection(uint32_t nclients, uint32_t* neles, uint8_t** cset
     	tmpval[1] = i;
 	    g_hash_table_insert(map,(void*) &((uint64_t*)csets[0])[2*i], tmpval);//&(((uint64_t*)csets[0])[2*i+1]));
     }
-#ifdef DEBUG
-    g_hash_table_foreach( map, printKeyValue, NULL );
-#endif
     gettimeofday(&end, NULL);
 #ifdef TIMING
     cout << "Insertion took " << getMillies(begin, end) << " ms" << endl;
