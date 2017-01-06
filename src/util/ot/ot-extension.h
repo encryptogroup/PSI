@@ -37,13 +37,12 @@ typedef struct OTBlock_t {
 #define REGISTER_BYTES AES_BYTES
 
 
-static void InitAESKey(AES_KEY_CTX* ctx, uint8_t* keybytes, uint32_t numkeys)
+static void InitAESKey(AES_KEY_CTX* ctx, uint8_t* keybytes, uint32_t numkeys, crypto* crypt)
 {
 	uint8_t* pBufIdx = keybytes;
 	for(uint32_t i=0; i<numkeys; i++ )
 	{
-		EVP_CIPHER_CTX_init(ctx+i);
-		EVP_EncryptInit_ex(ctx+i, EVP_aes_128_ecb(), NULL, pBufIdx, ZERO_IV);
+		crypt->init_aes_key(ctx + i, pBufIdx);
 
 		pBufIdx += AES_BYTES;
 	}
@@ -101,7 +100,7 @@ class OTExtensionSender {
 		intrin_sequential_ks4(m_vKeySeeds, keybytes, (int) nbaseOTs);
 #else
 		m_vKeySeeds = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * nbaseOTs);
-		InitAESKey(m_vKeySeeds, keybytes, nbaseOTs);
+		InitAESKey(m_vKeySeeds, keybytes, nbaseOTs, crypt);
 #endif
 		m_lSendLock = new CLock;
 
@@ -215,7 +214,7 @@ class OTExtensionReceiver {
 		intrin_sequential_ks4(m_vKeySeedMtx, keybytes, (int) nbaseOTs * 2);
 #else
 		m_vKeySeedMtx = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX) * nbaseOTs * 2);
-		InitAESKey(m_vKeySeedMtx, keybytes, nbaseOTs * 2);
+		InitAESKey(m_vKeySeedMtx, keybytes, nbaseOTs * 2, crypt);
 #endif
 
 		m_nSeed = (uint8_t*) malloc(sizeof(AES_BYTES)); //

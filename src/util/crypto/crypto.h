@@ -39,7 +39,17 @@ const uint8_t const_seed[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x
 
 enum bc_mode {ECB, CBC};
 
+//Check for the OpenSSL version number, since the EVP_CIPHER_CTX has become opaque from >= 1.1.0
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	#define OPENSSL_OPAQUE_EVP_CIPHER_CTX
+#endif
+
+
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+typedef EVP_CIPHER_CTX* AES_KEY_CTX;
+#else
 typedef EVP_CIPHER_CTX AES_KEY_CTX;
+#endif
 
 struct prf_state_ctx {
 	AES_KEY_CTX aes_key;
@@ -84,6 +94,7 @@ public:
 	//External encryption routines
 	void init_aes_key(AES_KEY_CTX* aes_key, uint8_t* seed, bc_mode mode=ECB, const uint8_t* iv=ZERO_IV);
 	void init_aes_key(AES_KEY_CTX* aes_key, uint32_t symbits, uint8_t* seed, bc_mode mode=ECB, const uint8_t* iv=ZERO_IV);
+	void clean_aes_key(AES_KEY_CTX* aeskey);
 	uint32_t get_aes_key_bytes();
 	void encrypt(AES_KEY_CTX* enc_key, uint8_t* resbuf, uint8_t* inbuf, uint32_t ninbytes);
 	void decrypt(AES_KEY_CTX* dec_key, uint8_t* resbuf, uint8_t* inbuf, uint32_t ninbytes);

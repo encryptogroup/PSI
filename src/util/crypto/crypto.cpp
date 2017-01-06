@@ -27,17 +27,22 @@ crypto::~crypto() {
 	free(sha_hash_buf);
 	free(aes_hash_buf_y1);
 	free(aes_hash_buf_y2);
-	//TODO: securely delete the AES keys
+
+	clean_aes_key(&aes_hash_key);
+	clean_aes_key(&aes_enc_key);
+	clean_aes_key(&aes_dec_key);
 }
 
 
 void crypto::init(uint32_t symsecbits, uint8_t* seed) {
-	//seed_aes_key(&(global_prf_state.aes_key), seed);
 	secparam = get_sec_lvl(symsecbits);
-	//aes_hash_key = NULL;
-	//aes_enc_key = NULL;
 
-	//rndctr = (uint64_t*) calloc(ceil_divide(AES_BYTES, sizeof(uint64_t)), sizeof(uint64_t));
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	aes_hash_key = EVP_CIPHER_CTX_new();
+	aes_enc_key = EVP_CIPHER_CTX_new();
+	aes_dec_key = EVP_CIPHER_CTX_new();
+#endif
+
 	init_prf_state(&global_prf_state, seed);
 
 	aes_hash_in_buf = (uint8_t*) malloc(AES_BYTES);
@@ -87,7 +92,11 @@ void gen_rnd_bytes(prf_state_ctx* prf_state, uint8_t* resbuf, uint32_t nbytes) {
 
 	//TODO it might be better to store the result directly in resbuf but this would require the invoking routine to pad it to a multiple of AES_BYTES
 	for(i = 0; i < size; i++, rndctr[0]++)	{
-		EVP_EncryptUpdate(aes_key, tmpbuf + i*AES_BYTES, &dummy, (uint8_t*) rndctr, AES_BYTES);
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+		EVP_EncryptUpdate(*aes_key, tmpbuf + i * AES_BYTES, &dummy, (uint8_t*) rndctr, AES_BYTES);
+#else
+		EVP_EncryptUpdate(aes_key, tmpbuf + i * AES_BYTES, &dummy, (uint8_t*) rndctr, AES_BYTES);
+#endif
 	}
 
 	memcpy(resbuf, tmpbuf, nbytes);
@@ -135,14 +144,24 @@ void crypto::gen_rnd_uniform(uint8_t* res, uint64_t mod) {
 
 void crypto::encrypt(AES_KEY_CTX* enc_key, uint8_t* resbuf, uint8_t* inbuf, uint32_t ninbytes) {
 	int32_t dummy;
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	EVP_EncryptUpdate(*enc_key, resbuf, &dummy, inbuf, ninbytes);
+	EVP_EncryptFinal_ex(*enc_key, resbuf, &dummy);
+#else
 	EVP_EncryptUpdate(enc_key, resbuf, &dummy, inbuf, ninbytes);
 	EVP_EncryptFinal_ex(enc_key, resbuf, &dummy);
+#endif
 }
 void crypto::decrypt(AES_KEY_CTX* dec_key, uint8_t* resbuf, uint8_t* inbuf, uint32_t ninbytes) {
 	int32_t dummy;
 	//cout << "inbuf = " << (hex) << ((uint64_t*) inbuf)[0] << ((uint64_t*) inbuf)[1] << (dec) << endl;
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	EVP_DecryptUpdate(*dec_key, resbuf, &dummy, inbuf, ninbytes);
+	EVP_DecryptFinal_ex(*dec_key, resbuf, &dummy);
+#else
 	EVP_DecryptUpdate(dec_key, resbuf, &dummy, inbuf, ninbytes);
 	EVP_DecryptFinal_ex(dec_key, resbuf, &dummy);
+#endif
 	//cout << "outbuf = " << (hex) << ((uint64_t*) resbuf)[0] << ((uint64_t*) resbuf)[1] << (dec) << " (" << dummy << ")" << endl;
 }
 
@@ -172,14 +191,29 @@ void crypto::init_aes_key(AES_KEY_CTX* aes_key, uint32_t symbits, uint8_t* seed,
 	seed_aes_key(aes_key, symbits, seed, mode, iv);
 }
 
+void crypto::clean_aes_key(AES_KEY_CTX* aeskey) {
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	EVP_CIPHER_CTX_free(*aeskey);
+#else
+	EVP_CIPHER_CTX_cleanup(aeskey);
+#endif
+}
+
+
 void crypto::seed_aes_key(AES_KEY_CTX* aeskey, uint8_t* seed, bc_mode mode, const uint8_t* iv, bool encrypt) {
 	seed_aes_key(aeskey, secparam.symbits, seed, mode, iv, encrypt);
 }
 
 
 void crypto::seed_aes_key(AES_KEY_CTX* aeskey, uint32_t symbits, uint8_t* seed, bc_mode mode, const uint8_t* iv, bool encrypt) {
-	//*aeskey = (AES_KEY_CTX*) malloc(sizeof(AES_KEY_CTX));
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	*aeskey = EVP_CIPHER_CTX_new();
+	AES_KEY_CTX aes_key_tmp = *aeskey;
+#else
 	EVP_CIPHER_CTX_init(aeskey);
+	AES_KEY_CTX* aes_key_tmp = aeskey;
+#endif
+
 	int (*initfct)(EVP_CIPHER_CTX*,const EVP_CIPHER*, ENGINE*,
 			const unsigned char*, const unsigned char*);
 
@@ -191,23 +225,23 @@ void crypto::seed_aes_key(AES_KEY_CTX* aeskey, uint32_t symbits, uint8_t* seed, 
 	switch (mode) {
 	case ECB:
 		if(symbits <= 128) {
-			initfct(aeskey, EVP_aes_128_ecb(), NULL, seed, iv);
+			initfct(aes_key_tmp, EVP_aes_128_ecb(), NULL, seed, iv);
 		} else {
-			initfct(aeskey, EVP_aes_256_ecb(), NULL, seed, iv);
+			initfct(aes_key_tmp, EVP_aes_256_ecb(), NULL, seed, iv);
 		}
 		break;
 	case CBC: //ECB_ENC
 		if(symbits <= 128) {
-			initfct(aeskey, EVP_aes_128_cbc(), NULL, seed, iv);
+			initfct(aes_key_tmp, EVP_aes_128_cbc(), NULL, seed, iv);
 		} else {
-			initfct(aeskey, EVP_aes_256_cbc(), NULL, seed, iv);
+			initfct(aes_key_tmp, EVP_aes_256_cbc(), NULL, seed, iv);
 		}
 		break;
 	default:
 		if(symbits <= 128) {
-			initfct(aeskey, EVP_aes_128_ecb(), NULL, seed, iv);
+			initfct(aes_key_tmp, EVP_aes_128_ecb(), NULL, seed, iv);
 		} else {
-			initfct(aeskey, EVP_aes_256_ecb(), NULL, seed, iv);
+			initfct(aes_key_tmp, EVP_aes_256_ecb(), NULL, seed, iv);
 		}
 		break;
 	}
@@ -244,8 +278,11 @@ void crypto::fixed_key_aes_hash(AES_KEY_CTX* aes_key, uint8_t* resbuf, uint32_t 
 	memcpy(aes_hash_in_buf, inbuf, ninbytes);
 
 	//two encryption iterations TODO: not secure since both blocks are treated independently, implement DM or MMO
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	EVP_EncryptUpdate(*aes_key, aes_hash_out_buf, &dummy, aes_hash_in_buf, AES_BYTES);
+#else
 	EVP_EncryptUpdate(aes_key, aes_hash_out_buf, &dummy, aes_hash_in_buf, AES_BYTES);
-
+#endif
 	((uint64_t*) aes_hash_out_buf)[0] ^= ((uint64_t*) aes_hash_in_buf)[0];
 	((uint64_t*) aes_hash_out_buf)[1] ^= ((uint64_t*) aes_hash_in_buf)[1];
 
@@ -257,7 +294,11 @@ void crypto::aes_cbc_hash(AES_KEY_CTX* aes_key, uint8_t* resbuf, uint8_t* inbuf,
 	uint32_t i;
 	int32_t dummy;
 
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	EVP_EncryptUpdate(*aes_key, resbuf, &dummy, inbuf, ninbytes);
+#else
 	EVP_EncryptUpdate(aes_key, resbuf, &dummy, inbuf, ninbytes);
+#endif
 
 	//TODO: optimized for faster PSI, input is always size of 32-bytes
 	for(i = 0; i < ninbytes/AES_BYTES; i++) {
@@ -335,7 +376,7 @@ void crypto::init_prf_state(prf_state_ctx* prf_state, uint8_t* seed) {
 
 void crypto::free_prf_state(prf_state_ctx* prf_state) {
 	free(prf_state->ctr);
-	//TODO: delete the AES key
+	clean_aes_key(&(prf_state->aes_key));
 }
 
 
@@ -393,21 +434,33 @@ void crypto::aes_compression_hash(AES_KEY_CTX* aes_key, uint8_t* resbuf, uint8_t
 	((uint64_t*) aes_hash_in_buf)[0] = ((uint64_t*) inbuf)[0] ^ ((uint64_t*) inbuf)[2];
 	((uint64_t*) aes_hash_in_buf)[1] = ((uint64_t*) inbuf)[1] ^ ((uint64_t*) inbuf)[3];
 
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	EVP_EncryptUpdate(*aes_key, aes_hash_buf_y1, &dummy, aes_hash_in_buf, AES_BYTES);
+#else
 	EVP_EncryptUpdate(aes_key, aes_hash_buf_y1, &dummy, aes_hash_in_buf, AES_BYTES);
+#endif
 
 	//cout << (hex) << ((uint64_t*) aes_hash_buf_y1)[0] << ((uint64_t*) aes_hash_buf_y1)[1] << (dec) << endl;
 
 	((uint64_t*) aes_hash_in_buf)[0] = ((uint64_t*) inbuf)[0] ^ ((uint64_t*) inbuf)[2] ^ ((uint64_t*) aes_hash_buf_y1)[0];
 	((uint64_t*) aes_hash_in_buf)[1] = ((uint64_t*) inbuf)[1] ^ ((uint64_t*) inbuf)[3] ^ ((uint64_t*) aes_hash_buf_y1)[1];
 
-	EVP_EncryptUpdate(aes_key, aes_hash_buf_y2, &dummy, aes_hash_in_buf, AES_BYTES);
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+		EVP_EncryptUpdate(*aes_key, aes_hash_buf_y2, &dummy, aes_hash_in_buf, AES_BYTES);
+#else
+		EVP_EncryptUpdate(aes_key, aes_hash_buf_y2, &dummy, aes_hash_in_buf, AES_BYTES);
+#endif
 
 	//cout << (hex) << ((uint64_t*) aes_hash_buf_y2)[0] << ((uint64_t*) aes_hash_buf_y2)[1] << (dec) << endl;
 
 	((uint64_t*) aes_hash_in_buf)[0] = ((uint64_t*) inbuf)[0] ^ ((uint64_t*) inbuf)[2] ^ ((uint64_t*) aes_hash_buf_y2)[0];
 	((uint64_t*) aes_hash_in_buf)[1] = ((uint64_t*) inbuf)[1] ^ ((uint64_t*) inbuf)[3] ^ ((uint64_t*) aes_hash_buf_y2)[1];
 
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
+	EVP_EncryptUpdate(*aes_key, resbuf, &dummy, aes_hash_in_buf, AES_BYTES);
+#else
 	EVP_EncryptUpdate(aes_key, resbuf, &dummy, aes_hash_in_buf, AES_BYTES);
+#endif
 
 	//cout << (hex) << ((uint64_t*) resbuf)[0] << ((uint64_t*) resbuf)[1] << (dec) << endl;
 
