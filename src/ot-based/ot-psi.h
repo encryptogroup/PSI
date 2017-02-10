@@ -15,16 +15,14 @@
 #include "../util/connection.h"
 #include "../hashing/cuckoo.h"
 #include "../hashing/simple_hashing.h"
-#include "../util/ot/ot-extension-1oon-ecc.h"
-#include "../util/ot/naor-pinkas.h"
-#include "../util/ot/opemasking.h"
+#include "../util/ot/kk-ot-extension.h"
 #include <algorithm>
-#include <glib.h>
 #include "../util/helpers.h"
 
 static bool DETAILED_TIMINGS=0;
 
 //#define DEBUG
+//#define PRINT_INPUTS
 //#define PRINT_BIN_CONTENT
 //#define PRINT_OPRG_MASKS
 //#define PRINT_RECEIVED_VALUES
@@ -75,10 +73,6 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 
 void send_masks(uint8_t* masks, uint32_t nmasks, uint32_t maskbytelen, CSocket& sock);
 void *receive_masks(void *ctx_tmp);
-
-
-void InitOTReceiver(uint8_t* keyMtx, CSocket sock, crypto* crypt);
-void InitOTSender(uint8_t* keySeeds, CBitVector& choices, CSocket sock, crypto* crypt);
 
 GHashTable* otpsi_create_hash_table(uint32_t elebytelen, uint8_t* hashes, uint32_t neles, uint32_t
 		hashbytelen, uint32_t* perm);

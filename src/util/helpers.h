@@ -12,6 +12,7 @@
 #include "typedefs.h"
 #include "crypto/crypto.h"
 #include "thread.h"
+#include <glib.h>
 
 struct element_ctx {
 	uint32_t nelements;

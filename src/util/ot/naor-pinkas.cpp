@@ -3,7 +3,7 @@
 
 
 void NaorPinkas::Receiver(uint32_t nSndVals, uint32_t nOTs, CBitVector& choices,
-		CSocket& socket, uint8_t* ret) {
+		CSocket* socket, uint8_t* ret) {
 
 	fe* PK0 = m_cPKCrypto->get_fe();
 	fe** PK_sigma = (fe**) malloc(sizeof(fe*) * nOTs);
@@ -36,7 +36,7 @@ void NaorPinkas::Receiver(uint32_t nSndVals, uint32_t nOTs, CBitVector& choices,
 		bg->pow(PK_sigma[k], pK[k]);//BrickPowerMod(&bg, PK_sigma[k], pK[k]);
 	}
 
-	socket.Receive(pBuf, nBufSize);
+	socket->Receive(pBuf, nBufSize);
 	uint8_t* pBufIdx = pBuf;
 
 	for (u = 0; u < nSndVals; u++) {
@@ -63,7 +63,7 @@ void NaorPinkas::Receiver(uint32_t nSndVals, uint32_t nOTs, CBitVector& choices,
 		pBufIdx += fe_bytes;//m_fParams.elebytelen;
 	}
 
-	socket.Send(pBuf, nOTs * m_cPKCrypto->fe_byte_size());
+	socket->Send(pBuf, nOTs * m_cPKCrypto->fe_byte_size());
 
 	free(pBuf);
 	pBuf = (uint8_t*) malloc(sizeof(uint8_t) * fe_bytes);//new uint8_t[m_fParams.elebytelen];
@@ -81,8 +81,7 @@ void NaorPinkas::Receiver(uint32_t nSndVals, uint32_t nOTs, CBitVector& choices,
 	delete bc;//BrickDelete(&bc);
 	delete bg;//BrickDelete(&bg);
 
-	free(pBuf);
-	//TODO delete all field elements and numbers
+	delete [] pBuf;
 	free(PK_sigma);
 	free(pDec);
 	free(pC);
@@ -92,7 +91,7 @@ void NaorPinkas::Receiver(uint32_t nSndVals, uint32_t nOTs, CBitVector& choices,
 
 
 
-void NaorPinkas::Sender(uint32_t nSndVals, uint32_t nOTs, CSocket& socket, uint8_t* ret)
+void NaorPinkas::Sender(uint32_t nSndVals, uint32_t nOTs, CSocket* socket, uint8_t* ret)
 {
 	num *alpha, *PKr, *tmp;
 	fe **pCr, **pC, *fetmp, *PK0r, *g, **pPK0;
@@ -113,23 +112,13 @@ void NaorPinkas::Sender(uint32_t nSndVals, uint32_t nOTs, CSocket& socket, uint8
 	pC[0] = m_cPKCrypto->get_fe();
 	g = m_cPKCrypto->get_generator();
 
-
-
-	/*FieldElementInit(alpha);
-	FieldElementInit(fetmp);
-	FieldElementInit(pC[0]);
-	FieldElementInit(PK0r);
-	FieldElementInit(tmp);*/
-
 	//random C1
-	//GetRandomNumber(alpha, m_fParams.secparam, m_fParams);//alpha = rand(m_nSecParam, 2);//TODO
 	pC[0]->set_pow(g, alpha);//FieldElementPow(pC[0], g, alpha, m_fParams);
 
 	//random C(i+1)
 	for (u = 1; u < nSndVals; u++) {
 		pC[u] = m_cPKCrypto->get_fe();//FieldElementInit(pC[u]);
 		tmp = m_cPKCrypto->get_rnd_num();
-		//GetRandomNumber(tmp, m_fParams.secparam, m_fParams);//alpha = rand(m_nSecParam, 2); //TODO
 		pC[u]->set_pow(g, tmp);//FieldElementPow(pC[u], g, tmp, m_fParams);
 	}
 
@@ -142,7 +131,7 @@ void NaorPinkas::Sender(uint32_t nSndVals, uint32_t nOTs, CSocket& socket, uint8
 		pC[u]->export_to_bytes(pBufIdx);//FieldElementToByte(pBufIdx, m_fParams.elebytelen, pC[u]);
 		pBufIdx += fe_bytes;//m_fParams.elebytelen;
 	}
-	socket.Send(pBuf, nBufSize);
+	socket->Send(pBuf, nBufSize);
 
 	//====================================================
 	// compute C^R
@@ -156,7 +145,7 @@ void NaorPinkas::Sender(uint32_t nSndVals, uint32_t nOTs, CSocket& socket, uint8
 	// N-P sender: receive pk0
 	nBufSize = fe_bytes * nOTs;
 	pBuf = (uint8_t*) malloc(nBufSize);
-	socket.Receive(pBuf, nBufSize);
+	socket->Receive(pBuf, nBufSize);
 
 	pBufIdx = pBuf;
 

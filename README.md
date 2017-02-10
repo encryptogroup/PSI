@@ -2,16 +2,16 @@
 
 ### Faster Private Set Intersection Based on OT Extension
 
-By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1] and *Benny Pinkas, Thomas Schneider, Gil Segev and Michael Zohner* in USENIX Security Symposium 2015 [2]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. 
+By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1], *Benny Pinkas, Thomas Schneider, Gil Segev and Michael Zohner* in USENIX Security Symposium 2015 [2], and *Benny Pinkas, Thomas Schneider and Michael Zohner* in ePrint [3]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. The implementations for performing PSI on a sets of a billion elements can be found [here](https://github.com/Oleksandr-Tkachenko/PSI_Intersection).
 
 ### Features
 ---
 
 * An implementation of different PSI protocols: 
   * the naive hashing solutions where elements are hashed and compared 
-  * the server-aided protocol of [3]
-  * the Diffie-Hellman-based PSI protocol of [4]
-  * the OT-based PSI protocol of [2]
+  * the server-aided protocol of [4]
+  * the Diffie-Hellman-based PSI protocol of [5]
+  * the OT-based PSI protocol of [3]
 
 This code is provided as a experimental implementation for testing purposes and should not be used in a productive environment. We cannot guarantee security and correctness.
 
@@ -64,9 +64,9 @@ This should print the following output in the second terminal:
 
 These commands will run the naive hashing protocol and compute the intersection on the 1024 randomly generated emails in sample_sets/emails_alice.txt and sample_sets/emails_bob.txt (where 3 intersecting elements were altered). To use a different protocol, the ['-p'] option can be varied as follows:
   * `-p 0`: the naive hashing protocol 
-  * `-p 1`: the server-aided protocol of [3]
-  * `-p 2`: the Diffie-Hellman-based PSI protocol of [4]
-  * `-p 3`: the OT-based PSI protocol of [2]
+  * `-p 1`: the server-aided protocol of [4]
+  * `-p 2`: the Diffie-Hellman-based PSI protocol of [5]
+  * `-p 3`: the OT-based PSI protocol of [3]
 
 For further information about the program options, run ```./demo.exe -h```.
 
@@ -95,8 +95,10 @@ The generator uses the first names, family names, and email providers listed in 
 
 [2] B. Pinkas, T. Schneider, G. Segev, M. Zohner. Phasing: Private Set Intersection using Permutation-based Hashing. USENIX Security 2015. Full version available at http://eprint.iacr.org/2015/634. 
 
-[3] S.  Kamara,  P.  Mohassel,  M.  Raykova,  and S. Sadeghian.  Scaling private set intersection to billion-element sets.  In
+[3] B. Pinkas, T. Schneider, M. Zohner. Scalable Private Set Intersection Based on OT Extension. Available at http://eprint.iacr.org/2016/930. 
+
+[4] S.  Kamara,  P.  Mohassel,  M.  Raykova,  and S. Sadeghian.  Scaling private set intersection to billion-element sets.  In
 Financial Cryptography and Data Security (FC’14) , LNCS. Springer, 2014.
 
-[4] C. Meadows.   A more efficient cryptographic matchmaking protocol for use in the absence of a continuously available third party.   In IEEE S&P’86, pages 134–137. IEEE, 1986.
+[5] C. Meadows.   A more efficient cryptographic matchmaking protocol for use in the absence of a continuously available third party.   In IEEE S&P’86, pages 134–137. IEEE, 1986.
 

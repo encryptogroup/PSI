@@ -106,22 +106,26 @@ void gen_rnd_bytes(prf_state_ctx* prf_state, uint8_t* resbuf, uint32_t nbytes) {
 
 void crypto::gen_rnd(uint8_t* resbuf, uint32_t nbytes) {
 	gen_rnd_bytes(&global_prf_state, resbuf, nbytes);
-	/*uint8_t* tmpbuf;
-	uint32_t i;
-	int32_t dummy;
-
-	uint32_t size = ceil_divide(nbytes, AES_BYTES);
-
-	//TODO it might be better to store the result directly in resbuf but this would require the invoking routine to pad it to a multiple of AES_BYTES
-	tmpbuf = (uint8_t*) malloc(sizeof(uint8_t) * size * AES_BYTES);
-	for(i = 0; i < size; i++, rndctr[0]++)	{
-		EVP_EncryptUpdate(&aes_rnd_key, tmpbuf + i*AES_BYTES, &dummy, (uint8_t*) rndctr, AES_BYTES);
-	}
-
-	memcpy(resbuf, tmpbuf, nbytes);
-
-	free(tmpbuf);*/
 }
+
+#ifdef AES256_HASH
+void gen_rnd_bytes_pipelined(prf_state_ctx* prf_state, uint8_t* resbuf, uint32_t nbytes) {
+	//Do as many pipelined iterations as fit into the AES buffer
+	uint64_t aes_iters_pipe = nbytes/AES_BYTES;
+	intrin_sequential_gen_rnd8_ks1(*(prf_state->ctr), resbuf, aes_iters_pipe, &(prf_state->aes_pipe_key));
+	*(prf_state->ctr) += aes_iters_pipe;
+
+	//Use the standard method for the remaining bytes
+	uint32_t resnbytes = nbytes - (aes_iters_pipe * AES_BYTES);
+	if(resnbytes > 0) {
+		gen_rnd_bytes(prf_state, resbuf+(aes_iters_pipe * AES_BYTES), resnbytes);
+	}
+}
+
+void crypto::gen_rnd_pipelined(uint8_t* resbuf, uint32_t numbytes) {
+	gen_rnd_bytes_pipelined(&global_prf_state, resbuf, numbytes);
+}
+#endif
 
 void crypto::gen_rnd_uniform(uint8_t* res, uint64_t mod) {
 	//pad to multiple of 4 bytes for uint32_t length
@@ -249,11 +253,11 @@ void crypto::seed_aes_key(AES_KEY_CTX* aeskey, uint32_t symbits, uint8_t* seed, 
 
 
 
-void crypto::hash_ctr(uint8_t* resbuf, uint32_t noutbytes, uint8_t* inbuf, uint32_t ninbytes, uint32_t ctr) {
-	uint8_t* tmpbuf = (uint8_t*) malloc(ninbytes + sizeof(uint32_t));
-	memcpy(tmpbuf, &ctr, sizeof(uint32_t));
-	memcpy(tmpbuf + sizeof(uint32_t), inbuf, ninbytes);
-	hash_routine(resbuf, noutbytes, tmpbuf, ninbytes+sizeof(uint32_t), sha_hash_buf);
+void crypto::hash_ctr(uint8_t* resbuf, uint32_t noutbytes, uint8_t* inbuf, uint32_t ninbytes, uint64_t ctr) {
+	uint8_t* tmpbuf = (uint8_t*) malloc(ninbytes + sizeof(uint64_t));
+	memcpy(tmpbuf, &ctr, sizeof(uint64_t));
+	memcpy(tmpbuf + sizeof(uint64_t), inbuf, ninbytes);
+	hash_routine(resbuf, noutbytes, tmpbuf, ninbytes+sizeof(uint64_t), sha_hash_buf);
 	free(tmpbuf);
 }
 
@@ -371,6 +375,9 @@ void crypto::gen_common_seed(prf_state_ctx* prf_state, CSocket& sock) {
 
 void crypto::init_prf_state(prf_state_ctx* prf_state, uint8_t* seed) {
 	seed_aes_key(&(prf_state->aes_key), seed);
+#ifdef AES256_HASH
+	intrin_sequential_ks4(&(prf_state->aes_pipe_key), seed, 1);
+#endif
 	prf_state->ctr = (uint64_t*) calloc(ceil_divide(secparam.symbits, 8*sizeof(uint64_t)), sizeof(uint64_t));
 }
 

@@ -27,9 +27,6 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t* elebyt
 	//Hash elements into a smaller domain
 	eleptr = (uint8_t*) malloc(maskbytelen * neles);
 
-	//cout << "Hashing " << neles << " elements with arbitrary bit-length into " <<
-	//		maskbitlen << " bit representation " << endl;
-
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_start, NULL);
 	}
@@ -94,10 +91,30 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebyte
 	crypt_env->gen_common_seed(&prf_state, sock[0]);
 
 	if(role == SERVER) {
+#ifdef PRINT_INPUTS
+		cout << "Server Input Set: " << endl;
+		for(uint32_t i = 0; i < neles; i++) {
+			for(uint32_t j = 0; j < elebytelen; j++) {
+				cout << (hex) << setfill('0') << setw(2) << (uint32_t) eleptr[i * elebytelen + j];
+			}
+			cout << (dec) << endl;
+		}
+#endif
+
 		nbins = ceil(epsilon * pneles);
 		otpsi_server(eleptr, neles, nbins, pneles, internal_bitlen, maskbitlen, crypt_env, sock, ntasks,
 				&prf_state);
 	} else { //playing as client
+#ifdef PRINT_INPUTS		
+		cout << "Client Input Set: " << endl;
+		for(uint32_t i = 0; i < neles; i++) {
+			for(uint32_t j = 0; j < elebytelen; j++) {
+				cout << (hex) << setfill('0') << setw(2) << (uint32_t) eleptr[i * elebytelen + j];
+			}
+			cout << (dec) << endl;
+		}
+#endif
+
 		nbins = ceil(epsilon * neles);
 		intersect_size = otpsi_client(eleptr, neles, nbins, pneles, internal_bitlen, maskbitlen, crypt_env,
 				sock, ntasks, &prf_state, &res_pos);
@@ -106,6 +123,14 @@ uint32_t otpsi(role_type role, uint32_t neles, uint32_t pneles, uint32_t elebyte
 		//	memcpy((*result) + i * elebytelen, elements + res_pos[i] * elebytelen, elebytelen);
 		//}
 		create_result_from_matches_fixed_bitlen(result, elebytelen, elements, res_pos, intersect_size);
+
+		/*cout << "Result has size " << intersect_size << endl;
+		for(uint32_t i = 0; i < intersect_size; i++) {
+			for(uint32_t j = 0; j < elebytelen; j++) {
+				cout << (hex) << setfill('0') << setw(2) << (uint32_t) (*result)[i * elebytelen + j];
+			}
+			cout << (dec) << endl;
+		}*/
 	}
 
 	if(elebitlen > maskbitlen)
@@ -330,16 +355,19 @@ void otpsi_server(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_t pn
 	nelesinbin = (uint32_t*) malloc(sizeof(uint32_t) * nbins);
 	maskbytelen = ceil_divide(maskbitlen, 8);
 
-	//outbitlen = getOutBitLen(inbitlen, nbins);//bitlen - addr_bits;
-
-	//hash_table = (uint8_t*) malloc(nbins * NUM_HASH_FUNCTIONS * ceil_divide(outbitlen, 8));
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_start, NULL);
 	}
 #ifdef TIMING
 	gettimeofday(&t_start, NULL);
 #endif
+
+#ifndef TEST_UTILIZATION
 	hash_table = simple_hashing(elements, neles, elebitlen, &outbitlen, nelesinbin, nbins, ntasks, prf_state);
+#else
+	cerr << "Test utilization is active, PSI protocol will not be working correctly!" << endl;
+	simple_hashing(elements, neles, elebitlen, &outbitlen, nelesinbin, nbins, ntasks, prf_state);
+#endif
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
 		cout << "Time for simple hashing:\t" << fixed << std::setprecision(2) <<
@@ -369,7 +397,6 @@ void otpsi_server(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_t pn
 
 
 #ifdef ENABLE_STASH
-	//TODO: implement correctly
 	//send masks for all items on the stash
 	for(uint32_t i = 0; i < stashsize; i++) {
 		send_masks(masks, neles, maskbytelen, sock[0]);
@@ -393,60 +420,23 @@ void otpsi_server(uint8_t* elements, uint32_t neles, uint32_t nbins, uint32_t pn
 
 void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* nelesinbin, uint32_t elebitlen,
 		uint32_t maskbitlen, crypto* crypt,	CSocket* sock, uint32_t nthreads, uint8_t* res_buf) {
-	CBitVector choices;
-	CBitVector resulting_masks;
-	uint32_t OTsPerElement, numOTs, i, u, maskbytelen, ctr;
-	uint8_t *keyMtx;
-	OTExtension1ooNECCReceiver* receiver;
+	CBitVector ht_vec, res_vec;
+	uint32_t maskbytelen = ceil_divide(maskbitlen, 8);;
+	KKOTExtRcv* receiver;
 	timeval t_start, t_end;
-
-	maskbytelen = ceil_divide(maskbitlen, 8);
-
-	OTsPerElement = ceil_divide(elebitlen, 8);
-	numOTs = nbins * OTsPerElement;
 
 #ifndef BATCH
 	cout << "Client: bins = " << nbins << ", elebitlen = " << elebitlen << " and maskbitlen = " <<
-			maskbitlen << " and performs " << numOTs << " OTs" << endl;
+			maskbitlen << " and performs " << nbins << " OTs" << endl;
 #endif
 
-	keyMtx = (uint8_t*) malloc(crypt->get_aes_key_bytes()*m_nCodeWordBits* 2);
-	if(DETAILED_TIMINGS) {
-		gettimeofday(&t_start, NULL);
-	}
+	receiver = new KKOTExtRcv(m_nCodeWordBits, elebitlen, crypt, sock);
 
-	InitOTReceiver(keyMtx, sock[0], crypt);
-	if(DETAILED_TIMINGS) {
-		gettimeofday(&t_end, NULL);
-		cout << "Time for base-OTs:\t\t" << fixed << std::setprecision(2) <<
-				getMillies(t_start, t_end) << " ms" << endl;
-		gettimeofday(&t_start, NULL);
-	}
+	ht_vec.AttachBuf(hash_table, nbins * ceil_divide(elebitlen, 8));
+	res_vec.AttachBuf(res_buf, neles * maskbytelen);
+	res_vec.Reset();
 
-	receiver = new OTExtension1ooNECCReceiver(m_nCodeWordBits, crypt, sock, keyMtx);
-
-	//TODO recheck size
-	choices.AttachBuf(hash_table, ceil_divide(numOTs * 8, 8));
-
-	//for(uint32_t i = 0; i < nbins; i++) {
-	resulting_masks.AttachBuf(res_buf, neles * maskbytelen);//[i].Create(maskbitlen);
-	resulting_masks.Reset();
-	//}
-
-	//cout << "Choices: ";
-	//choices.PrintHex();
-
-	CBitVector response;
-	response.Create(numOTs, AES_BITS);
-
-	//uint32_t itembitlen, uint32_t maskbitlen, CBitVector* results, crypto* crypt
-	//m_fMaskFct = new XORMasking(bitlength, m_cCrypto);
-	OPEMasking* mskfct = new OPEMasking(elebitlen, maskbitlen, nbins, nelesinbin, resulting_masks, crypt);
-	//choices.Reset();
-
-//	ObliviouslyReceive(choices, response, numOTs, AES_BITS, RN_OT);
-	//cout << "Receiver performing " << numOTs << " ots" << endl;
-	receiver->receive(numOTs, AES_BITS, choices, response, RN_OT, nthreads, mskfct);
+	receiver->receive(nbins, maskbitlen, &ht_vec, &res_vec, nthreads, nelesinbin);
 
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
@@ -456,34 +446,14 @@ void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* 
 	}
 
 #ifdef PRINT_OPRG_MASKS
-	for(i = 0, ctr=0; i < nbins; i++) {
+	for(uint32_t i = 0, ctr=0; i < nbins; i++) {
 		if(nelesinbin[i] > 0) {
 			cout << "Result for element i = " << i << " and choice = ";// << (hex) <<
 			for(uint32_t j = 0; j < OTsPerElement; j++) {
-				//cout << (hex) << (uint32_t) hash_table[j + i * OTsPerElement] << (dec);
 				cout << setw(2) << setfill('0') << (hex) << (uint32_t) choices.GetByte(j + i * OTsPerElement) << (dec);
 			}
 			cout << ": ";
 
-			//choices.Get<uint64_t>(i * OTsPerElement*8, OTsPerElement*8) << (dec) << ": ";
-			for(uint32_t j  = 0; j < maskbytelen; j++) {
-				cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[ctr * maskbytelen + j] << (dec);
-			}
-			cout << endl;
-			ctr++;
-			//resulting_masks[i].PrintHex();
-		}
-		//memcpy(res_buf_ptr, resulting_masks[i].GetArr(), maskbytelen);
-	}
-#endif
-
-
-	evaluate_crf(res_buf, res_buf, neles, maskbytelen, crypt);
-
-#ifdef PRINT_CRF_EVAL
-	for(i = 0, ctr=0; i < nbins; i++) {
-		if(nelesinbin[i] > 0) {
-			cout << "CRF Result for element i = " << i << ": ";
 			for(uint32_t j  = 0; j < maskbytelen; j++) {
 				cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[ctr * maskbytelen + j] << (dec);
 			}
@@ -492,14 +462,13 @@ void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* 
 		}
 	}
 #endif
+
 
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
 		cout << "Time for CRF evaluation:\t" << fixed << std::setprecision(2) <<
 				getMillies(t_start, t_end) << " ms" << endl;
 	}
-
-	delete mskfct;
 }
 
 
@@ -507,60 +476,24 @@ void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* 
 
 void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32_t* nelesinbin, uint32_t elebitlen,
 		uint32_t maskbitlen, crypto* crypt, CSocket* sock, uint32_t nthreads, uint8_t* res_buf) {
-	CBitVector input, results;
-	CBitVector baseOTchoices;
-	uint8_t* keySeeds;
-	uint32_t numOTs, OTsPerBin, i, maskbytelen;
-	OTExtension1ooNECCSender* sender;
+	CBitVector ht_vec, res_vec;
+	KKOTExtSnd* sender;
+	uint32_t maskbytelen = ceil_divide(maskbitlen, 8);
 	timeval t_start, t_end;
-
-	maskbytelen = maskbitlen / 8;
-
-	OTsPerBin = ceil_divide(elebitlen, 8);
-	numOTs = nbins * OTsPerBin;
 
 #ifndef BATCH
 	cout << "Server: bins = " << nbins << ", elebitlen = " << elebitlen << " and maskbitlen = " <<
-			maskbitlen << " and performs " << numOTs << " OTs" << endl;
+			maskbitlen << " and performs " << nbins << " OTs" << endl;
 #endif
 
-	baseOTchoices.Create(m_nCodeWordBits);
-	crypt->gen_rnd(baseOTchoices.GetArr(), ceil_divide(m_nCodeWordBits, 8));
+	sender = new KKOTExtSnd(m_nCodeWordBits, elebitlen, crypt, sock);
 
-	keySeeds = (uint8_t*) malloc(crypt->get_aes_key_bytes()*m_nCodeWordBits);
 
-	if(DETAILED_TIMINGS) {
-		gettimeofday(&t_start, NULL);
-	}
-	InitOTSender(keySeeds, baseOTchoices, sock[0], crypt);
-	if(DETAILED_TIMINGS) {
-		gettimeofday(&t_end, NULL);
-		cout << "Time for base-OTs:\t\t" << fixed << std::setprecision(2) <<
-				getMillies(t_start, t_end) << " ms" << endl;
-		gettimeofday(&t_start, NULL);
-	}
-	sender = new OTExtension1ooNECCSender(m_nCodeWordBits, crypt, sock, baseOTchoices, keySeeds);
+	ht_vec.AttachBuf(hash_table, totaleles * ceil_divide(elebitlen, 8));
+	res_vec.AttachBuf(res_buf, totaleles * maskbytelen);
 
-	//Check base-OT seeds
-	/*for(i = 0; i < m_nCodeWordBits; i++) {
-			cout << "i = " << i << ": " << (hex) << ((uint64_t*) keySeeds)[(i*2)] << ((uint64_t*) keySeeds)[(i*2)+1] << (dec) << endl;
-	}*/
-
-	//for(uint32_t i = 0; i < nbins; i++) {
-	input.AttachBuf(hash_table, totaleles * ceil_divide(elebitlen, 8));
-	results.AttachBuf(res_buf, totaleles * maskbytelen);
-	//input.Reset();
-	results.Reset();
-	//}
-
-	CBitVector values[2];
-	values[0].Create(numOTs * AES_BITS);
-	values[1].Create(numOTs * AES_BITS);
-
-	//m_fMaskFct = new XORMasking(bitlength, m_cCrypto);
-	OPEMasking* mskfct = new OPEMasking(elebitlen, maskbitlen, nbins, nelesinbin, input, results, crypt);
-	//cout << "Sender performing " << numOTs << " ots" << endl;
-	sender->send(numOTs, AES_BITS, values, RN_OT, nthreads, mskfct);//ObliviouslySend(values, numOTs, AES_BITS, RN_OT);
+	sender->send(nbins, maskbitlen, &ht_vec, &res_vec, nthreads, nelesinbin);
+	
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
 		cout << "Time for OT extension:\t\t" << fixed << std::setprecision(2) <<
@@ -569,7 +502,7 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 	}
 
 #ifdef PRINT_OPRG_MASKS
-	for(i = 0; i < totaleles; i++) {
+	for(uint32_t i = 0; i < totaleles; i++) {
 		cout << "OPRG output for element i = " << i << " ";
 		for(uint32_t j  = 0; j < OTsPerBin; j++) {
 			cout << setw(2) << setfill('0') << (hex) << (uint32_t) hash_table[i * OTsPerBin + j] << (dec);
@@ -581,113 +514,15 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 		cout << endl;
 	}
 #endif
-		//memcpy(res_buf_ptr, results[i].GetArr(), maskbytelen * nelesinbin[i]);
-		//res_buf_ptr+=maskbytelen * nelesinbin[i];
 
-	//evaluate correlation robust function on the elements
-	evaluate_crf(res_buf, res_buf, totaleles, maskbytelen, crypt);
-
-#ifdef PRINT_CRF_EVAL
-	for(i = 0; i < totaleles; i++) {
-		cout << "CRF output for element i = " << i << ": ";
-		for(uint32_t j  = 0; j < maskbytelen; j++) {
-			cout << setw(2) << setfill('0') << (hex) << (uint32_t) res_buf[i * maskbytelen + j] << (dec);
-		}
-		cout << endl;
-	}
-#endif
 
 	if(DETAILED_TIMINGS) {
 		gettimeofday(&t_end, NULL);
 		cout << "Time for CRF evaluation:\t" << fixed << std::setprecision(2) <<
 				getMillies(t_start, t_end) << " ms" << endl;
 	}
-
-	delete mskfct;
 }
 
-
-void InitOTSender(uint8_t* keySeeds, CBitVector& choices, CSocket sock, crypto* crypt)
-{
-#ifdef TIMING
-	timeval np_begin, np_end;
-#endif
-
-//	keySeeds = (uint8_t*) malloc(crypt->get_aes_key_bytes()*m_nCodeWordBits);
-	NaorPinkas* bot = new NaorPinkas(crypt, ECC_FIELD);
-
-
-#ifdef TIMING
-	gettimeofday(&np_begin, NULL);
-#endif
-
-	uint32_t numbaseOTs = m_nCodeWordBits;
-	uint8_t* pBuf = (uint8_t*) malloc(numbaseOTs * crypt->get_hash_bytes());
-
-	bot->Receiver(2, numbaseOTs, choices, sock, pBuf);
-
-	//Key expansion
-	uint8_t* pBufIdx = pBuf;
-	for(uint32_t i=0; i<numbaseOTs; i++ ) //80 HF calls for the Naor Pinkas protocol
-	{
-		memcpy(keySeeds + i * crypt->get_aes_key_bytes(), pBufIdx, crypt->get_aes_key_bytes());
-		pBufIdx+=crypt->get_hash_bytes();
-		//cout << i << ": " << (hex) << ((uint64_t*)keySeeds)[2*i] << ((uint64_t*)keySeeds)[2*i+1]<< (dec) << endl;
-	}
-	free(pBuf);
-
-#ifdef TIMING
-	gettimeofday(&np_end, NULL);
-	printf("Time for performing the NP base-OTs: %f seconds\n", getMillies(np_begin, np_end));
-#endif
-
-}
-
-void InitOTReceiver(uint8_t* keyMtx, CSocket sock, crypto* crypt)
-{
-#ifdef TIMING
-	timeval np_begin, np_end;
-#endif
-
-	NaorPinkas* bot = new NaorPinkas(crypt, ECC_FIELD);//NaorPinkas(m_sSecLvl, m_aSeed);
-
-#ifdef TIMING
-	gettimeofday(&np_begin, NULL);
-#endif
-
-	uint32_t numbaseOTs = m_nCodeWordBits;
-	// Execute NP receiver routine and obtain the key
-	uint8_t* pBuf = (uint8_t*) malloc(crypt->get_hash_bytes() * numbaseOTs * 2);
-	bot->Sender(2, numbaseOTs, sock, pBuf);
-
-#ifdef AES256_HASH
-	//Key expansion
-	uint8_t* pBufIdx = pBuf;
-	for(uint32_t i=0; i<numbaseOTs; i++ )
-	{
-		memcpy(keyMtx + i * crypt->get_aes_key_bytes(), pBufIdx, crypt->get_aes_key_bytes());
-		pBufIdx += crypt->get_hash_bytes();
-		memcpy(keyMtx + i * crypt->get_aes_key_bytes() + numbaseOTs * crypt->get_aes_key_bytes(), pBufIdx, crypt->get_aes_key_bytes());
-		pBufIdx += crypt->get_hash_bytes();
-	}
-#else
-	//Key expansion
-	uint8_t* pBufIdx = pBuf;
-	for(uint32_t i=0; i<numbaseOTs * 2; i++ )
-	{
-		memcpy(keyMtx + i * crypt->get_aes_key_bytes(), pBufIdx, crypt->get_aes_key_bytes());
-		pBufIdx += crypt->get_hash_bytes();
-	}
-#endif
-
-	free(pBuf);
-
-
-#ifdef TIMING
-	gettimeofday(&np_end, NULL);
-	printf("Time for performing the NP base-OTs: %f seconds\n", getMillies(np_begin, np_end));
-#endif
-}
 
 
 void send_masks(uint8_t* masks, uint32_t nmasks, uint32_t maskbytelen, CSocket& sock) {

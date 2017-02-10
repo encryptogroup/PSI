@@ -262,7 +262,7 @@ inline void domain_hashing(uint32_t nelements, uint8_t** elements, uint32_t* ele
 	//eleptr=elements;
 	resultptr = result;
 #ifndef BATCH
-	cout << "Hashing " << nelements << " elements from " << elebytelens << " bytes into " << resultbytelen << " bytes" << endl;
+	cout << "Hashing " << nelements << " elements with arbitrary length into into " << resultbytelen << " bytes" << endl;
 #endif
 	//hash_buf = (uint8_t*) calloc(crypt->get_hash_bytes(), sizeof(uint8_t));
 	for(i = 0; i < nelements; i++, resultptr+=resultbytelen) {

@@ -9,9 +9,10 @@
 #define TYPEDEFS_H_
 
 //#define DEBUG
-#define BATCH
+//#define BATCH
 //#define TIMING
 //#define AES256_HASH
+//#define USE_PIPELINED_AES_NI
 
 #include <iostream>
 #include <string.h>
@@ -42,6 +43,10 @@ enum role_type {SERVER, CLIENT};
 
 #define OTEXT_BLOCK_SIZE_BITS	128
 #define OTEXT_BLOCK_SIZE_BYTES	16
+
+#define NUMOTBLOCKS 1024
+#define REGISTER_BITS AES_BITS
+#define REGISTER_BYTES AES_BYTES
 
 #define VECTOR_INTERNAL_SIZE 8
 
@@ -103,9 +108,6 @@ typedef struct securitylevel
 	uint32_t eccpfbits;
 	uint32_t ecckcbits;
 } seclvl;
-
-
-
 
 
 static const seclvl ST = {40, 80, 1024, 160, 163};
