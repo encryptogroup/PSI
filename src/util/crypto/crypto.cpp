@@ -28,9 +28,11 @@ crypto::~crypto() {
 	free(aes_hash_buf_y1);
 	free(aes_hash_buf_y2);
 
+#ifdef OPENSSL_OPAQUE_EVP_CIPHER_CTX
 	clean_aes_key(&aes_hash_key);
 	clean_aes_key(&aes_enc_key);
 	clean_aes_key(&aes_dec_key);
+#endif
 }
 
 
