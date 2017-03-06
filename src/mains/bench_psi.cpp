@@ -20,7 +20,7 @@ int32_t benchroutine(int32_t argc, char** argv) {
 	string address = "127.0.0.1";
 	uint16_t port=7766;
 	timeval begin, end;
-	vector<CSocket> sockfd(ntasks);
+	vector<CSocket> sockfd;
 	field_type ftype = ECC_FIELD;
 	role_type role = (role_type) 0;
 	uint64_t bytes_sent=0, bytes_received=0, mbfac;
@@ -35,6 +35,7 @@ int32_t benchroutine(int32_t argc, char** argv) {
 			&address, &port, &ntasks, &protocol, &nclients, &epsilon, &cardinality, &ftype,
 			&detailed_timings);
 
+	sockfd.resize(ntasks);
 	if(role == SERVER) {
 		if(protocol == TTP) {
 			ntasks = nclients;
