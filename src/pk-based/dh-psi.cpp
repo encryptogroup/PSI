@@ -77,7 +77,7 @@ uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx, c
 #ifdef DEBUG
 	cout << "Hashing elements" << endl;
 #endif
-	run_task(ntasks, ectx, hash);
+	run_task(ntasks, ectx, psi_hashing_function);
 
 	/* Encrypt elements */
 	ectx.eles.input1d = hashes;
@@ -141,7 +141,7 @@ uint32_t dhpsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx, c
 #ifdef DEBUG
 	cout << "Hashing elements" << endl;
 #endif
-	run_task(ntasks, ectx, hash);
+	run_task(ntasks, ectx, psi_hashing_function);
 
 #ifdef DEBUG
 	cout << "Exchanging hashes" << endl;

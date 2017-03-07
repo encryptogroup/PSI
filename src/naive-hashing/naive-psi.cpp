@@ -75,7 +75,7 @@ uint32_t naivepsi(role_type role, uint32_t neles, uint32_t pneles, task_ctx ectx
 	ectx.eles.perm = perm;
 	ectx.sctx.symcrypt = crypt_env;
 
-	run_task(ntasks, ectx, hash);
+	run_task(ntasks, ectx, psi_hashing_function);
 
 	phashes = (uint8_t*) malloc(sizeof(uint8_t) * pneles * maskbytelen);
 

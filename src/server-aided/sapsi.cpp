@@ -203,7 +203,7 @@ uint32_t client_routine(uint32_t neles, task_ctx ectx, uint32_t* matches,
 	ectx.sctx.symcrypt = crypt_env;
 	ectx.sctx.keydata = (uint8_t*) const_seed;
 
-	run_task(ntasks, ectx, hash);
+	run_task(ntasks, ectx, psi_hashing_function);
 
 	socket->Send(masks, maskbytelen * neles);
 

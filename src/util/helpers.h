@@ -181,7 +181,7 @@ static void *sym_encrypt(void* context) {
 	return 0;
 }
 
-static void *hash(void* context) {
+static void *psi_hashing_function(void* context) {
 #ifdef DEBUG
 	cout << "Hashing thread started" << endl;
 #endif
