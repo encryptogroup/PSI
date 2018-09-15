@@ -23,7 +23,7 @@ class BaseOT
 {
 	public:
 		BaseOT(crypto* crypt, field_type ftype){m_cCrypto = crypt; m_cPKCrypto = crypt->gen_field(ftype); };
-		~BaseOT(){delete m_cPKCrypto; };
+		virtual ~BaseOT(){delete m_cPKCrypto; };
 
 		virtual void Sender(uint32_t nSndVals, uint32_t nOTs, CSocket* sock, uint8_t* ret) = 0;
 		virtual void Receiver(uint32_t nSndVals, uint32_t uint32_t, CBitVector& choices, CSocket* sock, uint8_t* ret) = 0;

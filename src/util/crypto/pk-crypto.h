@@ -18,7 +18,7 @@ class brickexp;
 class pk_crypto {
 public:
 	pk_crypto(seclvl sp, uint8_t* seed){};
-	~pk_crypto(){};
+	virtual ~pk_crypto(){};
 	virtual num* get_num() = 0;
 	virtual num* get_rnd_num(uint32_t bitlen=0) = 0;
 	virtual fe* get_fe() = 0;
@@ -45,7 +45,7 @@ protected:
 class num {
 public:
 	num(){};
-	~num(){};
+	virtual ~num(){};
 	virtual void set(num* src) = 0;
 	virtual void set_si(int32_t src) = 0;
 	virtual void set_add(num* a, num* b) = 0;
@@ -60,7 +60,7 @@ public:
 class fe {
 public:
 	fe(){};
-	~fe(){};
+	virtual ~fe(){};
 	virtual void set(fe* src) = 0;
 	virtual void set_mul(fe* a, fe* b) = 0;
 	virtual void set_pow(fe* b, num* e) = 0;
@@ -78,7 +78,7 @@ protected:
 class brickexp {
 public:
 	brickexp(){};
-	~brickexp(){};
+	virtual ~brickexp(){};
 
 	virtual void pow(fe* result, num* e) = 0;
 };
