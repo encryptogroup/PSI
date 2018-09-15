@@ -7,6 +7,10 @@
 
 #include "ecc-pk-crypto.h"
 
+#include "../../externals/miracl_lib/ecn.h"
+#include "../../externals/miracl_lib/big.h"
+#include "../../externals/miracl_lib/ec2.h"
+
 
 char *ecx163 = (char *) "2fe13c0537bbc11acaa07d793de4e6d5e5c94eee8";
 char *ecy163 = (char *) "289070fb05d38ff58321f2e800536d538ccdaa3d9";
@@ -203,6 +207,13 @@ void ecc_fe::sample_fe_from_bytes(uint8_t* buf, uint32_t bytelen) {
 }
 
 
+void ecc_fe::print() {
+	cout << (*val) << endl;
+}
+
+void ecc_fe::init() {
+	val = new EC2();
+}
 
 
 ecc_num::ecc_num(ecc_field* fld) {
@@ -245,20 +256,34 @@ void ecc_num::export_to_bytes(uint8_t* buf, uint32_t field_size_bytes) {
 	big_to_bytes ((int32_t) field_size_bytes, val->getbig(), (char*) buf, true);
 }
 
+void ecc_num::print() {
+	cout << (*val) << endl;
+}
+
 
 
 // ecc_brickexp methods
+struct ecc_brickexp::ecc_brickexp_impl {
+	ebrick2 br;
+};
+
 ecc_brickexp::ecc_brickexp(fe* point, ecc_fparams* fparams) {
 	Big x, y;
 	fe2ec2(point)->getxy(x, y);
-	ebrick2_init(&br, x.getbig(), y.getbig(), fparams->BA->getbig(), fparams->BB->getbig(),
-			fparams->m, fparams->a, fparams->b, fparams->c, 8, fparams->secparam);
+	impl = std::make_unique<ecc_brickexp_impl>();
+	ebrick2_init(&impl->br, x.getbig(), y.getbig(), fparams->BA->getbig(),
+			fparams->BB->getbig(), fparams->m, fparams->a, fparams->b,
+			fparams->c, 8, fparams->secparam);
+}
+
+ecc_brickexp::~ecc_brickexp() {
+	ebrick2_end(&impl->br);
 }
 
 void ecc_brickexp::pow(fe* result, num* e)
 {
 	Big xtmp, ytmp;
-	mul2_brick(&br, num2Big(e)->getbig(), xtmp.getbig(), ytmp.getbig());
+	mul2_brick(&impl->br, num2Big(e)->getbig(), xtmp.getbig(), ytmp.getbig());
 	*fe2ec2(result) = EC2(xtmp, ytmp);
 }
 

@@ -9,10 +9,11 @@
 #define ECC_PK_CRYPTO_H_
 
 #include "pk-crypto.h"
+#include <memory>
 
-#include "../../externals/miracl_lib/ecn.h"
-#include "../../externals/miracl_lib/big.h"
-#include "../../externals/miracl_lib/ec2.h"
+// forward declarations
+class Big;
+class EC2;
 
 
 #define fe2ec2(fieldele) (((ecc_fe*) (fieldele))->get_val())
@@ -94,7 +95,7 @@ public:
 	void export_to_bytes(uint8_t* buf, uint32_t field_size_bytes);
 	void import_from_bytes(uint8_t* buf, uint32_t field_size_bytes);
 	void set_rnd(uint32_t bits);
-	void print() {cout << (*val) << endl;};
+	void print();
 
 private:
 	Big* val;
@@ -118,11 +119,11 @@ public:
 	void import_from_bytes(uint8_t* buf);
 	void sample_fe_from_bytes(uint8_t* buf, uint32_t bytelen);
 
-	void print() {cout << (*val) << endl;};
+	void print();
 
 
 private:
-	void init() {val = new EC2();};
+	void init();
 	EC2* val;
 	ecc_field* field;
 };
@@ -130,11 +131,12 @@ private:
 class ecc_brickexp : public brickexp {
 public:
 	ecc_brickexp(fe* point, ecc_fparams* fparams);
-	~ecc_brickexp() {ebrick2_end(&br);}
+	~ecc_brickexp();
 
 	void pow(fe* res, num* e);
 private:
-	ebrick2 br;
+	struct ecc_brickexp_impl;	// used to hide MIRACL's ebrick2 type in the implementation
+	std::unique_ptr<ecc_brickexp_impl> impl;
 };
 
 void point_to_byte(uint8_t* pBufIdx, uint32_t field_size_bytes, EC2* to_export);
