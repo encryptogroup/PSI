@@ -587,6 +587,7 @@ void *otpsi_query_hash_table(void* ctx_tmp) {//GHashTable *map, uint8_t* element
 
 	free(matches);
 	//return size_intersect;
+	return NULL;
 }
 
 //TODO if this works correctly, combine with other find intersection methods and outsource to hashing_util.h
@@ -717,6 +718,7 @@ void print_bin_content(uint8_t* hash_table, uint32_t nbins, uint32_t elebytelen,
 void *receive_masks(void *ctx_tmp) {
 	mask_rcv_ctx* ctx = (mask_rcv_ctx*) ctx_tmp;
 	ctx->sock->Receive(ctx->rcv_buf, ctx->maskbytelen * ctx->nmasks);
+	return NULL;
 }
 
 uint32_t get_stash_size(uint32_t neles) {

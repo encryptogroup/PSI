@@ -112,6 +112,7 @@ void *gen_entries(void *ctx_tmp) {
 	}
 	free(tmpbuf);
 	free(address);
+	return NULL;
 }
 
 inline void insert_element(sht_ctx* table, uint8_t* element, uint32_t* address, uint8_t* tmpbuf, hs_t* hs) {
