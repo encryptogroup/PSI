@@ -1,5 +1,7 @@
 #include "kk-ot-extension.h"
 
+#define TRUE 1  // as in Miracl
+
 /*
  * ---------------------------------- OT Extension Sender Part --------------------------------------
  */

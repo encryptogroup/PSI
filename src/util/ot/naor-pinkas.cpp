@@ -81,7 +81,7 @@ void NaorPinkas::Receiver(uint32_t nSndVals, uint32_t nOTs, CBitVector& choices,
 	delete bc;//BrickDelete(&bc);
 	delete bg;//BrickDelete(&bg);
 
-	delete [] pBuf;
+	free(pBuf);
 	free(PK_sigma);
 	free(pDec);
 	free(pC);
