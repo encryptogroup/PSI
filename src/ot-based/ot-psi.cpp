@@ -425,6 +425,10 @@ void oprg_client(uint8_t* hash_table, uint32_t nbins, uint32_t neles, uint32_t* 
 	KKOTExtRcv* receiver;
 	timeval t_start, t_end;
 
+	if(DETAILED_TIMINGS) {
+		gettimeofday(&t_start, NULL);
+	}
+
 #ifndef BATCH
 	cout << "Client: bins = " << nbins << ", elebitlen = " << elebitlen << " and maskbitlen = " <<
 			maskbitlen << " and performs " << nbins << " OTs" << endl;
@@ -480,6 +484,10 @@ void oprg_server(uint8_t* hash_table, uint32_t nbins, uint32_t totaleles, uint32
 	KKOTExtSnd* sender;
 	uint32_t maskbytelen = ceil_divide(maskbitlen, 8);
 	timeval t_start, t_end;
+
+	if(DETAILED_TIMINGS) {
+		gettimeofday(&t_start, NULL);
+	}
 
 #ifndef BATCH
 	cout << "Server: bins = " << nbins << ", elebitlen = " << elebitlen << " and maskbitlen = " <<
