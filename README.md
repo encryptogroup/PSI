@@ -2,7 +2,7 @@
 
 ### Faster Private Set Intersection Based on OT Extension
 
-By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1], *Benny Pinkas, Thomas Schneider, Gil Segev and Michael Zohner* in USENIX Security Symposium 2015 [2], and *Benny Pinkas, Thomas Schneider and Michael Zohner* in ePrint [3]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. The implementations for performing PSI on a sets of a billion elements can be found [here](https://github.com/Oleksandr-Tkachenko/PSI_Intersection).
+By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1], *Benny Pinkas, Thomas Schneider, Gil Segev and Michael Zohner* in USENIX Security Symposium 2015 [2], and *Benny Pinkas, Thomas Schneider and Michael Zohner* in ePrint [3]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. The implementations for performing PSI on a sets of a billion elements can be found at [Miracl commit cff161b](https://github.com/Oleksandr-Tkachenko/PSI_Intersection).
 
 ### Features
 ---
@@ -40,7 +40,7 @@ This code is provided as an experimental implementation for testing purposes and
 
 3. Call `make` in the root directory to compile all dependencies, tests, and examples and create the executables: **psi.exe** (used for benchmarking) and **demo.exe** (a small demonstrator for intersecting email addresses).
 
-Please note that downloading this project as ZIP file will yield compilation errors, since the Miracl library is included as external project. To solve this, download the Miracl sources in commit version `cff161b` (found [here](https://github.com/CertiVox/Miracl/tree/cff161bad6364548b361b63938a988db23f60c2a) and extract the contents of the main folder in `src/externals/Miracl`. Then, continue with steps 2 and 3.
+Please note that downloading this project as ZIP file may result in compilation errors, since the Miracl library is included as external project. To solve this, download the Miracl sources in commit version `cff161b` (found [here](https://github.com/CertiVox/Miracl/tree/cff161bad6364548b361b63938a988db23f60c2a) and extract the contents of the main folder in `src/externals/Miracl`. Then, continue with steps 2 and 3.
 
 ### Executing the Code
 
@@ -62,7 +62,7 @@ This should print the following output in the second terminal:
 
 
 
-These commands will run the naive hashing protocol and compute the intersection on the 1024 randomly generated emails in sample_sets/emails_alice.txt and sample_sets/emails_bob.txt (where 3 intersecting elements were altered). To use a different protocol, the ['-p'] option can be varied as follows:
+These commands will run the naive hashing protocol and compute the intersection on the 1024 randomly generated emails in sample_sets/emails_alice.txt and sample_sets/emails_bob.txt (where 3 intersecting elements were altered). To use a different protocol, the `-p` option can be varied as follows:
   * `-p 0`: the naive hashing protocol 
   * `-p 1`: the server-aided protocol of [4]
   * `-p 2`: the Diffie-Hellman-based PSI protocol of [5]
