@@ -10,8 +10,8 @@ eprovs_file = "Email-Providers.txt"
 STOP_AFTER_FAILURES = 20 # stop after this number of failures
 
 if len(sys.argv)!=2:
-        print "Syntax: "+sys.argv[0]+" N"
-	print "Generates a sorted list of N unique email adresses"
+        print("Syntax:", sys.argv[0], "N")
+	print("Generates a sorted list of N unique email addresses")
         exit()
 N = int(sys.argv[1])
 
