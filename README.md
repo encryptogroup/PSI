@@ -26,7 +26,7 @@ This code is provided as an experimental implementation for testing purposes and
   * [`libglib2.0-dev`](https://packages.debian.org/testing/libglib2.0-dev)
   * [`libssl-dev`](https://packages.debian.org/testing/libssl-dev)
 
-  Install these packages with your favorite package manager, e.g, `sudo apt-get install <package-name>`.
+  Install these packages with your favorite package manager, e.g., `sudo apt-get install <package-name>`.
 
 
 ### Building the Project
