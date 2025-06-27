@@ -13,7 +13,7 @@ By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Sympos
   * the Diffie-Hellman-based PSI protocol of [5]
   * the OT-based PSI protocol of [3]
 
-This code is provided as a experimental implementation for testing purposes and should not be used in a productive environment. We cannot guarantee security and correctness.
+This code is provided as an experimental implementation for testing purposes and should not be used in a productive environment. We cannot guarantee security and correctness.
 
 ### Requirements
 ---
