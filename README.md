@@ -62,7 +62,7 @@ This should print the following output in the second terminal:
 
 
 
-These commands will run the naive hashing protocol and compute the intersection on the 1024 randomly generated emails in sample_sets/emails_alice.txt and sample_sets/emails_bob.txt (where 3 intersecting elements were altered). To use a different protocol, the ['-p'] option can be varied as follows:
+These commands will run the naive hashing protocol and compute the intersection on the 1024 randomly generated emails in sample_sets/emails_alice.txt and sample_sets/emails_bob.txt (where 3 intersecting elements were altered). To use a different protocol, the `-p` option can be varied as follows:
   * `-p 0`: the naive hashing protocol 
   * `-p 1`: the server-aided protocol of [4]
   * `-p 2`: the Diffie-Hellman-based PSI protocol of [5]
