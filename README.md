@@ -2,7 +2,7 @@
 
 ### Faster Private Set Intersection Based on OT Extension
 
-By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1], *Benny Pinkas, Thomas Schneider, Gil Segev and Michael Zohner* in USENIX Security Symposium 2015 [2], and *Benny Pinkas, Thomas Schneider and Michael Zohner* in ePrint [3]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. The implementations for performing PSI on a sets of a billion elements can be found [here](https://github.com/Oleksandr-Tkachenko/PSI_Intersection).
+By *Benny Pinkas, Thomas Schneider and Michael Zohner* in USENIX Security Symposium 2014 [1], *Benny Pinkas, Thomas Schneider, Gil Segev and Michael Zohner* in USENIX Security Symposium 2015 [2], and *Benny Pinkas, Thomas Schneider and Michael Zohner* in ePrint [3]. Please note that the code is currently being restructured and not all routines might work correctly. The PSI code is licensed under AGPLv3, see the LICENSE file for a copy of the license. The implementations for performing PSI on a sets of a billion elements can be found at [Miracl commit cff161b](https://github.com/Oleksandr-Tkachenko/PSI_Intersection).
 
 ### Features
 ---
